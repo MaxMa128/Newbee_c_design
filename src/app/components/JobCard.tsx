@@ -1,16 +1,15 @@
-import { useState } from 'react';
-import { MapPin, Clock, Bookmark, BookmarkCheck, Users, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, Users } from 'lucide-react';
 import { Language, translations } from './i18n';
 import { Job, formatTime } from './jobData';
 
 interface JobCardProps {
   job: Job;
   lang: Language;
+  onClick?: () => void;
 }
 
-export function JobCard({ job, lang }: JobCardProps) {
+export function JobCard({ job, lang, onClick }: JobCardProps) {
   const t = translations[lang];
-  const [saved, setSaved] = useState(false);
 
   const salaryStr = job.salaryMax
     ? `HK$${job.salary}–${job.salaryMax}${t[job.salaryPeriod === 'hourly' ? 'hourlyUnit' : job.salaryPeriod === 'daily' ? 'dailyUnit' : 'monthlyUnit']}`
@@ -18,10 +17,12 @@ export function JobCard({ job, lang }: JobCardProps) {
 
   return (
     <div
+      onClick={onClick}
       className="bg-card rounded-2xl p-4 transition-all duration-150 hover:shadow-md active:scale-[0.99]"
       style={{
         boxShadow: '0 1px 3px rgba(15,22,35,0.06), 0 4px 16px rgba(15,22,35,0.04)',
         border: '1px solid rgba(15,22,35,0.06)',
+        cursor: 'pointer',
       }}
     >
       {/* Tags row */}
@@ -41,7 +42,7 @@ export function JobCard({ job, lang }: JobCardProps) {
         )}
       </div>
 
-      {/* Header: logo + title + save */}
+      {/* Header: logo + title + salary */}
       <div className="flex items-start gap-3">
         {/* Logo */}
         <div
@@ -64,17 +65,11 @@ export function JobCard({ job, lang }: JobCardProps) {
           </p>
         </div>
 
-        {/* Save + chevron */}
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); setSaved((s) => !s); }}
-            className="p-1 rounded-lg transition-colors"
-            style={{ color: saved ? '#F5A623' : '#CBD1E1', background: 'none', border: 'none', cursor: 'pointer' }}
-            aria-label={saved ? t.saved : t.save}
-          >
-            {saved ? <BookmarkCheck size={17} /> : <Bookmark size={17} />}
-          </button>
-          <ChevronRight size={15} style={{ color: '#CBD1E1', marginTop: 4 }} />
+        {/* Salary — top right */}
+        <div className="shrink-0 text-right">
+          <span style={{ fontSize: '1rem', fontWeight: 800, color: '#0F1623', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+            {salaryStr}
+          </span>
         </div>
       </div>
 
@@ -98,13 +93,6 @@ export function JobCard({ job, lang }: JobCardProps) {
             {t.spotsLeft}{job.remainingSpots}{lang !== 'en' ? '人' : ''}
           </span>
         </div>
-      </div>
-
-      {/* Salary */}
-      <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(15,22,35,0.05)' }}>
-        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F1623', letterSpacing: '-0.02em' }}>
-          {salaryStr}
-        </span>
       </div>
     </div>
   );

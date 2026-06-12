@@ -167,10 +167,8 @@ export function HomePage({ lang, onJobPress }: HomePageProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: i * 0.04 }}
-              onClick={() => onJobPress?.(job.id)}
-              style={{ cursor: 'pointer' }}
             >
-              <JobCard job={job} lang={lang} />
+              <JobCard job={job} lang={lang} onClick={() => onJobPress?.(job.id)} />
             </motion.div>
           ))
         ) : (

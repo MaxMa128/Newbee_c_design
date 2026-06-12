@@ -6,7 +6,10 @@ import { AuthPage } from './components/AuthPage';
 import { HomePage } from './components/HomePage';
 import { ProfilePage } from './components/ProfilePage';
 import { ComingSoon } from './components/ComingSoon';
+import { JobDetailPage } from './components/JobDetailPage';
+import { HKIDVerifyFlow } from './components/HKIDVerifyFlow';
 import { Language, translations } from './components/i18n';
+import { jobs } from './components/jobData';
 
 type Screen = 'welcome' | 'auth' | 'main';
 
@@ -22,6 +25,9 @@ export default function App() {
   const [lang, setLang] = useState<Language>('zh-HK');
   const [activeNav, setActiveNav] = useState(0);
   const [user, setUser] = useState<UserData | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
+  const [showVerifyFlow, setShowVerifyFlow] = useState(false);
 
   const t = translations[lang];
 
@@ -115,7 +121,7 @@ export default function App() {
                   {activeNav === 0 && (
                     <motion.div key="jobs" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <HomePage lang={lang} />
+                      <HomePage lang={lang} onJobPress={(id) => setSelectedJobId(id)} />
                     </motion.div>
                   )}
                   {activeNav === 1 && (
@@ -133,11 +139,63 @@ export default function App() {
                   {activeNav === 3 && (
                     <motion.div key="profile" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <ProfilePage lang={lang} onLangChange={setLang} user={currentUser} onLogout={handleLogout} />
+                      <ProfilePage
+                        lang={lang}
+                        onLangChange={setLang}
+                        user={currentUser}
+                        onLogout={handleLogout}
+                        isVerified={isVerified}
+                        onStartVerify={() => setShowVerifyFlow(true)}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
+
+              {/* Job detail overlay */}
+              <AnimatePresence>
+                {selectedJobId !== null && (() => {
+                  const job = jobs.find((j) => j.id === selectedJobId);
+                  if (!job) return null;
+                  return (
+                    <motion.div
+                      key={`job-detail-${selectedJobId}`}
+                      className="absolute inset-0 z-30"
+                      initial={{ opacity: 0, x: 40 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 40 }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <JobDetailPage
+                      job={job}
+                      lang={lang}
+                      isVerified={isVerified}
+                      onBack={() => setSelectedJobId(null)}
+                      onStartVerify={() => setShowVerifyFlow(true)}
+                    />
+                    </motion.div>
+                  );
+                })()}
+              </AnimatePresence>
+
+              {/* HKID verify flow overlay */}
+              <AnimatePresence>
+                {showVerifyFlow && (
+                  <motion.div
+                    key="hkid-verify"
+                    className="absolute inset-0 z-50"
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 40 }}
+                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <HKIDVerifyFlow
+                      onClose={() => setShowVerifyFlow(false)}
+                      onSuccess={() => { setIsVerified(true); setShowVerifyFlow(false); }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Bottom nav */}
               <div

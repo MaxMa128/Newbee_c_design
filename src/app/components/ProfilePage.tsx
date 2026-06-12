@@ -21,6 +21,8 @@ interface ProfilePageProps {
   onLangChange: (l: Language) => void;
   user: UserData;
   onLogout: () => void;
+  isVerified?: boolean;
+  onStartVerify?: () => void;
 }
 
 export interface EducationEntry {
@@ -1745,10 +1747,10 @@ function TempPoolRulesModal({ onClose }: { onClose: () => void }) {
 
 // ── Main profile view ──────────────────────────────────
 
-function MainProfileView({ lang, user, t, editData, onNavigate, onLogout, onLangChange }: {
+function MainProfileView({ lang, user, t, editData, onNavigate, onLogout, onLangChange, isVerified, onStartVerify }: {
   lang: Language; user: UserData; t: ReturnType<typeof translations[Language]>;
   editData: ProfileEditData; onNavigate: (v: ProfileView) => void; onLogout: () => void;
-  onLangChange: (l: Language) => void;
+  onLangChange: (l: Language) => void; isVerified?: boolean; onStartVerify?: () => void;
 }) {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [tempPoolOn, setTempPoolOn] = useState(false);
@@ -1783,9 +1785,24 @@ function MainProfileView({ lang, user, t, editData, onNavigate, onLogout, onLang
         </div>
 
         <div className="mt-4 pt-4 flex flex-col gap-2" style={{ borderTop: '1px solid rgba(15,22,35,0.06)' }}>
-          <div className="flex items-center gap-2">
-            <Shield size={13} style={{ color: '#15803D', flexShrink: 0 }} />
-            <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 600 }}>{t.certifiedHKID}</span>
+          {/* HKID status row */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Shield size={13} style={{ color: isVerified ? '#15803D' : '#9CA3AF', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.78rem', color: isVerified ? '#15803D' : '#9CA3AF', fontWeight: 600 }}>
+                {isVerified ? '香港身份證已認證' : '香港身份證未認證'}
+              </span>
+            </div>
+            <button
+              onClick={onStartVerify}
+              style={{
+                background: isVerified ? '#EEF1F8' : '#FEF3DC',
+                border: 'none', cursor: 'pointer', borderRadius: '0.5rem', padding: '3px 8px',
+                fontSize: '0.7rem', fontWeight: 700, color: isVerified ? '#6B7A99' : '#D4891A',
+              }}
+            >
+              {isVerified ? '更新認證' : '立即認證'}
+            </button>
           </div>
           {topEdu && (
             <div className="flex items-center gap-2">
@@ -1942,7 +1959,7 @@ function initEditData(user: UserData): ProfileEditData {
   };
 }
 
-export function ProfilePage({ lang, onLangChange, user, onLogout }: ProfilePageProps) {
+export function ProfilePage({ lang, onLangChange, user, onLogout, isVerified, onStartVerify }: ProfilePageProps) {
   const t = translations[lang];
   const [stack, setStack] = useState<ProfileView[]>(['main']);
   const [editData, setEditData] = useState<ProfileEditData>(() => initEditData(user));
@@ -1986,7 +2003,7 @@ export function ProfilePage({ lang, onLangChange, user, onLogout }: ProfilePageP
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         >
           {current === 'main' && (
-            <MainProfileView lang={lang} user={user} t={t} editData={editData} onNavigate={push} onLogout={onLogout} onLangChange={onLangChange} />
+            <MainProfileView lang={lang} user={user} t={t} editData={editData} onNavigate={push} onLogout={onLogout} onLangChange={onLangChange} isVerified={isVerified} onStartVerify={onStartVerify} />
           )}
           {current === 'settings' && (
             <SettingsView lang={lang} user={user} t={t} />
