@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, Upload, Camera, CheckCircle2, XCircle, Shield, FileText, User, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -37,51 +37,55 @@ function StepDots({ step }: { step: Step }) {
 function IntroStep({ onStart }: { onStart: () => void }) {
   return (
     <div className="flex-1 flex flex-col px-5 py-6">
-      {/* Icon */}
-      <div className="flex flex-col items-center gap-4 py-6">
+      {/* Hero */}
+      <div className="flex flex-col items-center gap-3 pt-4 pb-8">
         <div className="relative">
-          <div className="flex items-center justify-center rounded-3xl" style={{ width: 80, height: 80, background: '#FEF3DC', border: '3px solid rgba(245,166,35,0.25)' }}>
-            <Shield size={36} style={{ color: '#F5A623' }} />
-          </div>
-          <div className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full" style={{ width: 26, height: 26, background: '#0F1623', border: '2.5px solid #FFFFFF' }}>
-            <span style={{ fontSize: '0.6rem', color: '#F5A623', fontWeight: 800 }}>HK</span>
+          <div className="flex items-center justify-center rounded-full" style={{ width: 72, height: 72, background: '#FEF3DC' }}>
+            <span style={{ fontSize: '2rem' }}>🪪</span>
           </div>
         </div>
         <div className="text-center">
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F1623', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>香港身份證認證</h2>
-          <p style={{ fontSize: '0.85rem', color: '#6B7A99', lineHeight: 1.65, margin: 0 }}>
-            申請工作前，需完成身份認證以確保平台安全，整個過程約需 2 分鐘。
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F1623', margin: '0 0 8px 0', letterSpacing: '-0.025em' }}>確認係你本人</h2>
+          <p style={{ fontSize: '0.88rem', color: '#6B7A99', lineHeight: 1.7, margin: 0 }}>
+            申請工作前，先完成簡單確認。<br />只需約 2 分鐘。
           </p>
         </div>
       </div>
 
-      {/* Steps preview */}
-      <div className="flex flex-col gap-3 mb-6">
+      {/* Steps — horizontal flow */}
+      <div className="flex items-start gap-2 mb-8">
         {[
-          { icon: <FileText size={16} style={{ color: '#F5A623' }} />, num: '01', title: '上傳香港身份證', desc: '拍攝或上傳 HKID 正面照片' },
-          { icon: <Camera size={16} style={{ color: '#F5A623' }} />, num: '02', title: '人臉識別', desc: '自拍一張照片以核對身份' },
-          { icon: <Shield size={16} style={{ color: '#F5A623' }} />, num: '03', title: '系統核驗', desc: '幾秒鐘完成，自動顯示結果' },
-        ].map((item) => (
-          <div key={item.num} className="flex items-start gap-3 rounded-2xl p-3.5" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
-            <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 38, height: 38, background: '#FEF3DC' }}>
+          { num: '01', icon: <FileText size={15} style={{ color: '#F5A623' }} />, title: '拍低身份證', desc: '請拍清楚 HKID 正面' },
+          { num: '02', icon: <Camera size={15} style={{ color: '#F5A623' }} />, title: '自拍一下', desc: '確認係你本人操作' },
+          { num: '03', icon: <Shield size={15} style={{ color: '#F5A623' }} />, title: '完成確認', desc: '通過後即可申請工作' },
+        ].map((item, i) => (
+          <div key={item.num} className="flex-1 flex flex-col items-center gap-2 relative">
+            {/* Connector line */}
+            {i < 2 && (
+              <div style={{
+                position: 'absolute', top: 19, left: '62%', right: '-38%',
+                height: 1, background: 'rgba(245,166,35,0.3)',
+              }} />
+            )}
+            <div className="flex items-center justify-center rounded-xl" style={{ width: 38, height: 38, background: '#FEF3DC', border: '1.5px solid rgba(245,166,35,0.3)', zIndex: 1 }}>
               {item.icon}
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#F5A623', letterSpacing: '0.08em' }}>{item.num}</span>
-                <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{item.title}</p>
-              </div>
-              <p style={{ fontSize: '0.78rem', color: '#9CA3AF', margin: 0 }}>{item.desc}</p>
+            <div className="text-center">
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#F5A623', letterSpacing: '0.06em', margin: '0 0 2px 0' }}>{item.num}</p>
+              <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F1623', margin: '0 0 2px 0', lineHeight: 1.3 }}>{item.title}</p>
+              <p style={{ fontSize: '0.7rem', color: '#9CA3AF', margin: 0, lineHeight: 1.4 }}>{item.desc}</p>
             </div>
           </div>
         ))}
       </div>
 
+      <div className="flex-1" />
+
       {/* Privacy note */}
-      <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 mb-6" style={{ background: '#F7F8FC', border: '1px solid rgba(15,22,35,0.07)' }}>
-        <Shield size={12} style={{ color: '#9CA3AF', flexShrink: 0, marginTop: 2 }} />
-        <p style={{ fontSize: '0.75rem', color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
-          您的身份證資料將按香港《個人資料（私隱）條例》受到保護，僅用於身份核驗，不會用作其他用途。
+      <div className="flex items-start gap-2 rounded-xl px-3 py-3 mb-5" style={{ background: '#F7F8FC', border: '1px solid rgba(15,22,35,0.06)' }}>
+        <Shield size={12} style={{ color: '#C4C9D6', flexShrink: 0, marginTop: 2 }} />
+        <p style={{ fontSize: '0.73rem', color: '#9CA3AF', lineHeight: 1.65, margin: 0 }}>
+          資料只用作身份確認，不會作其他用途，並受香港私隱法例保護。
         </p>
       </div>
 
@@ -90,7 +94,7 @@ function IntroStep({ onStart }: { onStart: () => void }) {
         className="w-full rounded-xl py-4 transition-all active:scale-[0.98]"
         style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: '#0F1623' }}
       >
-        開始認證
+        開始拍攝
       </button>
     </div>
   );
@@ -108,9 +112,9 @@ function UploadIDStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="flex-1 flex flex-col px-5 py-6">
       <div className="mb-6">
-        <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F1623', margin: '0 0 6px 0' }}>上傳香港身份證</h2>
+        <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F1623', margin: '0 0 6px 0' }}>拍低身份證</h2>
         <p style={{ fontSize: '0.82rem', color: '#6B7A99', margin: 0, lineHeight: 1.6 }}>
-          請拍攝或上傳 HKID 正面清晰照片，確保四角完整、字跡清晰。
+          請拍清楚 HKID 正面，確保四角完整、字跡清晰。
         </p>
       </div>
 
@@ -194,7 +198,7 @@ function UploadIDStep({ onNext }: { onNext: () => void }) {
           color: uploaded ? '#0F1623' : '#9CA3AF',
         }}
       >
-        下一步：人臉識別
+        下一步：自拍確認
       </button>
     </div>
   );
@@ -203,99 +207,86 @@ function UploadIDStep({ onNext }: { onNext: () => void }) {
 // ── Face scan step ──────────────────────────────────────
 function FaceScanStep({ onNext }: { onNext: () => void }) {
   const [phase, setPhase] = useState<'idle' | 'camera' | 'captured'>('idle');
-  const [countdown, setCountdown] = useState(3);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  function startCamera() {
-    setPhase('camera');
-    setCountdown(3);
-    let c = 3;
-    intervalRef.current = setInterval(() => {
-      c -= 1;
-      setCountdown(c);
-      if (c <= 0) {
-        clearInterval(intervalRef.current!);
-        setPhase('captured');
-      }
-    }, 1000);
-  }
-
-  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current); }, []);
 
   return (
     <div className="flex-1 flex flex-col px-5 py-6">
       <div className="mb-6">
-        <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F1623', margin: '0 0 6px 0' }}>人臉識別</h2>
+        <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F1623', margin: '0 0 6px 0' }}>自拍一下</h2>
         <p style={{ fontSize: '0.82rem', color: '#6B7A99', margin: 0, lineHeight: 1.6 }}>
-          請按下按鈕自拍一張照片，系統將與您的身份證相片核對。
+          確認係你本人操作。拍好後點擊「使用此相片」確認。
         </p>
       </div>
 
       {/* Camera preview area */}
-      <div className="flex flex-col items-center mb-6">
+      <div className="flex flex-col items-center mb-5">
         {phase === 'idle' && (
           <div
-            className="flex flex-col items-center justify-center gap-4 rounded-3xl"
-            style={{ width: 220, height: 220, background: '#EEF1F8', border: '2px dashed rgba(15,22,35,0.15)' }}
+            className="flex flex-col items-center justify-center gap-3 rounded-3xl"
+            style={{ width: 220, height: 220, background: '#EEF1F8', border: '2px dashed rgba(15,22,35,0.12)' }}
           >
-            <User size={48} style={{ color: '#CBD1E1' }} />
-            <p style={{ fontSize: '0.78rem', color: '#9CA3AF', textAlign: 'center', margin: 0, padding: '0 20px' }}>請確保面部清晰可見，光線充足</p>
+            <User size={52} style={{ color: '#CBD1E1' }} />
+            <p style={{ fontSize: '0.75rem', color: '#9CA3AF', textAlign: 'center', margin: 0, padding: '0 24px', lineHeight: 1.5 }}>
+              面部正對鏡頭<br />確保光線充足
+            </p>
           </div>
         )}
 
         {phase === 'camera' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative">
-            {/* Simulated camera feed */}
             <div
-              className="flex flex-col items-center justify-center rounded-3xl overflow-hidden"
-              style={{ width: 220, height: 220, background: '#1A2335', border: '3px solid #F5A623' }}
+              className="flex items-center justify-center rounded-3xl overflow-hidden"
+              style={{ width: 220, height: 220, background: '#0F1623', border: '3px solid #F5A623' }}
             >
-              {/* Fake camera UI */}
-              <div className="flex items-center justify-center" style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(245,166,35,0.15)', border: '2px solid rgba(245,166,35,0.4)' }}>
-                <User size={36} style={{ color: 'rgba(245,166,35,0.7)' }} />
-              </div>
-            </div>
-            {/* Countdown overlay */}
-            <div className="absolute inset-0 flex items-end justify-center pb-3">
-              <div className="flex items-center justify-center rounded-full" style={{ width: 44, height: 44, background: '#F5A623' }}>
-                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F1623' }}>{countdown}</span>
+              <div style={{ width: 90, height: 90, borderRadius: '50%', background: 'rgba(245,166,35,0.12)', border: '2px solid rgba(245,166,35,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <User size={40} style={{ color: 'rgba(245,166,35,0.6)' }} />
               </div>
             </div>
             {/* Corner brackets */}
-            {[['top-2 left-2', 'border-t-2 border-l-2'], ['top-2 right-2', 'border-t-2 border-r-2'], ['bottom-2 left-2', 'border-b-2 border-l-2'], ['bottom-2 right-2', 'border-b-2 border-r-2']].map(([pos, cls], i) => (
-              <div key={i} className={`absolute ${pos} ${cls} border-orange-400`} style={{ width: 20, height: 20, borderColor: '#F5A623' }} />
+            {([['top-2 left-2'], ['top-2 right-2'], ['bottom-2 left-2'], ['bottom-2 right-2']] as string[][]).map(([pos], i) => (
+              <div key={i} className={`absolute ${pos}`} style={{
+                width: 18, height: 18,
+                borderTop: i < 2 ? '2.5px solid #F5A623' : 'none',
+                borderBottom: i >= 2 ? '2.5px solid #F5A623' : 'none',
+                borderLeft: i % 2 === 0 ? '2.5px solid #F5A623' : 'none',
+                borderRight: i % 2 === 1 ? '2.5px solid #F5A623' : 'none',
+              }} />
             ))}
+            {/* Tap to capture hint */}
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(245,166,35,0.9)', background: 'rgba(15,22,35,0.6)', borderRadius: 20, padding: '4px 12px' }}>
+                準備好了點擊拍攝
+              </span>
+            </div>
           </motion.div>
         )}
 
         {phase === 'captured' && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative">
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="relative">
             <div
               className="flex items-center justify-center rounded-3xl"
-              style={{ width: 220, height: 220, background: '#1A2335', border: '3px solid #15803D' }}
+              style={{ width: 220, height: 220, background: '#0F1623', border: '3px solid #15803D' }}
             >
-              <div className="flex items-center justify-center" style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(21,128,61,0.2)', border: '2px solid rgba(21,128,61,0.5)' }}>
-                <User size={36} style={{ color: 'rgba(21,128,61,0.9)' }} />
+              <div style={{ width: 90, height: 90, borderRadius: '50%', background: 'rgba(21,128,61,0.18)', border: '2px solid rgba(21,128,61,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <User size={40} style={{ color: 'rgba(21,128,61,0.9)' }} />
               </div>
             </div>
-            <div className="absolute bottom-2 right-2 flex items-center justify-center rounded-full" style={{ width: 36, height: 36, background: '#15803D', border: '2.5px solid #FFFFFF' }}>
-              <CheckCircle2 size={18} style={{ color: '#FFFFFF' }} />
+            <div className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full" style={{ width: 38, height: 38, background: '#15803D', border: '2.5px solid #FFFFFF' }}>
+              <CheckCircle2 size={19} style={{ color: '#FFFFFF' }} />
             </div>
           </motion.div>
         )}
 
         {phase !== 'idle' && (
-          <p style={{ fontSize: '0.75rem', color: phase === 'captured' ? '#15803D' : '#F5A623', marginTop: 12, fontWeight: 600 }}>
-            {phase === 'camera' ? `${countdown} 秒後自動拍攝…` : '自拍照片已擷取'}
+          <p style={{ fontSize: '0.75rem', marginTop: 12, fontWeight: 600, color: phase === 'captured' ? '#15803D' : '#F5A623' }}>
+            {phase === 'camera' ? '點擊下方按鈕拍攝' : '相片已擷取'}
           </p>
         )}
       </div>
 
-      {/* Tips */}
+      {/* Tips — only on idle */}
       {phase === 'idle' && (
-        <div className="rounded-xl px-3 py-3 mb-4 flex flex-col gap-2" style={{ background: '#FFFBEB', border: '1px solid rgba(245,166,35,0.25)' }}>
-          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#D4891A', margin: 0 }}>拍攝提示</p>
-          {['保持面部正對鏡頭，不要遮擋', '光線充足，避免逆光', '移除口罩、眼鏡等遮面物品'].map((tip, i) => (
+        <div className="rounded-xl px-3 py-3 mb-4 flex flex-col gap-1.5" style={{ background: '#FFFBEB', border: '1px solid rgba(245,166,35,0.2)' }}>
+          {['面部正對鏡頭，不要遮擋', '光線充足，避免逆光', '移除口罩、眼鏡等遮面物品'].map((tip, i) => (
             <div key={i} className="flex items-center gap-2">
               <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#F5A623', flexShrink: 0 }} />
               <span style={{ fontSize: '0.78rem', color: '#92580A' }}>{tip}</span>
@@ -304,38 +295,45 @@ function FaceScanStep({ onNext }: { onNext: () => void }) {
         </div>
       )}
 
-      {phase === 'captured' && (
-        <div className="flex items-center gap-2 mb-4">
-          <button
-            onClick={() => { setPhase('idle'); }}
-            className="flex items-center gap-1.5 rounded-xl px-3 py-2"
-            style={{ background: 'none', border: '1.5px solid rgba(15,22,35,0.12)', cursor: 'pointer' }}
-          >
-            <RefreshCw size={13} style={{ color: '#6B7A99' }} />
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#6B7A99' }}>重新拍攝</span>
-          </button>
-        </div>
-      )}
-
-      <div className="mt-auto flex flex-col gap-3">
+      <div className="mt-auto flex flex-col gap-2.5">
         {phase === 'idle' && (
           <button
-            onClick={startCamera}
+            onClick={() => setPhase('camera')}
             className="w-full rounded-xl py-4 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
             style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: '#0F1623' }}
           >
             <Camera size={18} />
-            開啟相機拍攝
+            開啟相機
+          </button>
+        )}
+        {phase === 'camera' && (
+          <button
+            onClick={() => setPhase('captured')}
+            className="w-full rounded-xl py-4 flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
+            style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: '#0F1623' }}
+          >
+            <Camera size={18} />
+            拍攝
           </button>
         )}
         {phase === 'captured' && (
-          <button
-            onClick={onNext}
-            className="w-full rounded-xl py-4 transition-all active:scale-[0.98]"
-            style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: '#0F1623' }}
-          >
-            提交驗證
-          </button>
+          <>
+            <button
+              onClick={onNext}
+              className="w-full rounded-xl py-4 transition-all active:scale-[0.98]"
+              style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: '#0F1623' }}
+            >
+              使用此相片
+            </button>
+            <button
+              onClick={() => setPhase('idle')}
+              className="w-full rounded-xl py-3 flex items-center justify-center gap-1.5"
+              style={{ background: 'none', border: '1.5px solid rgba(15,22,35,0.12)', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, color: '#6B7A99' }}
+            >
+              <RefreshCw size={13} />
+              重新拍攝
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -566,7 +564,7 @@ export function HKIDVerifyFlow({ onClose, onSuccess }: HKIDVerifyFlowProps) {
             <ChevronLeft size={18} style={{ color: '#0F1623' }} />
           </button>
           <div className="flex flex-col items-center gap-1">
-            <h2 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>HKID 身份認證</h2>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>身份確認</h2>
             {showDots && <StepDots step={step} />}
           </div>
           <div style={{ width: 36 }} />

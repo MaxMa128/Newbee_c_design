@@ -401,8 +401,8 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify }: 
                   <Shield size={22} style={{ color: '#F5A623' }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>需要完成身份認證</p>
-                  <p style={{ fontSize: '0.78rem', color: '#9CA3AF', margin: '3px 0 0 0' }}>申請工作前必須驗證香港身份證</p>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>先確認一下身份</p>
+                  <p style={{ fontSize: '0.78rem', color: '#9CA3AF', margin: '3px 0 0 0' }}>申請工作前完成簡單確認，只需約 2 分鐘</p>
                 </div>
               </div>
 
@@ -410,10 +410,10 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify }: 
               <div className="rounded-xl px-4 py-3 flex flex-col gap-2" style={{ background: '#FFFBEB', border: '1px solid rgba(245,166,35,0.25)' }}>
                 <div className="flex items-center gap-2">
                   <AlertCircle size={13} style={{ color: '#D4891A' }} />
-                  <p style={{ fontSize: '0.78rem', fontWeight: 600, color: '#D4891A', margin: 0 }}>為什麼需要認證？</p>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 600, color: '#D4891A', margin: 0 }}>點解要確認？</p>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#92580A', lineHeight: 1.65, margin: 0 }}>
-                  為確保平台安全及保障僱主及求職者雙方利益，NewBee 要求所有用戶在申請工作前完成香港身份證實名認證。
+                  為保障僱主同求職者雙方，NewBee 需要確認每位申請者的身份。資料受香港私隱法例保護。
                 </p>
               </div>
 
@@ -445,7 +445,7 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify }: 
                   className="rounded-xl py-3 transition-all active:scale-[0.98]"
                   style={{ flex: 2, background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: '#0F1623' }}
                 >
-                  立即認證身份
+                  立即確認身份
                 </button>
               </div>
             </motion.div>

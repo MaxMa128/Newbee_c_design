@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Briefcase, CalendarDays, MessageSquare, User } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Briefcase, CalendarDays, MessageSquare, User, Map, ChevronRight, X, Minimize2, LogOut as ExitIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { WelcomePage } from './components/WelcomePage';
 import { AuthPage } from './components/AuthPage';
@@ -18,6 +18,165 @@ interface UserData {
   phone: string;
   gender: string;
   age: number;
+}
+
+// ── Dev navigation button ──────────────────────────────
+interface DevNavAction {
+  group: string;
+  label: string;
+  sub?: string;
+  action: () => void;
+}
+
+interface DevNavButtonProps {
+  navKey: string; // changes on every navigation so temp-hide resets
+  actions: DevNavAction[];
+}
+
+function DevNavButton({ navKey, actions }: DevNavButtonProps) {
+  const [open, setOpen] = useState(false);
+  const [tempHiddenKey, setTempHiddenKey] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const prevKey = useRef(navKey);
+
+  // Re-show after temp-hide when navigation changes
+  useEffect(() => {
+    if (tempHiddenKey !== null && navKey !== prevKey.current) {
+      setTempHiddenKey(null);
+    }
+    prevKey.current = navKey;
+  }, [navKey, tempHiddenKey]);
+
+  if (dismissed) return null;
+  if (tempHiddenKey === navKey) return null;
+
+  // Group actions
+  const groups = [...new Set(actions.map((a) => a.group))];
+
+  return (
+    <div style={{ position: 'absolute', bottom: 16, right: 12, zIndex: 200, userSelect: 'none' }}>
+      <AnimatePresence>
+        {open && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setOpen(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: -1 }}
+            />
+            {/* Panel */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 12 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                position: 'absolute',
+                bottom: 48,
+                right: 0,
+                width: 220,
+                background: 'rgba(15,22,35,0.93)',
+                backdropFilter: 'blur(16px)',
+                borderRadius: 16,
+                overflow: 'hidden',
+                boxShadow: '0 16px 48px rgba(15,22,35,0.4)',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              {/* Header */}
+              <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#F5A623', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
+                  Dev Navigator
+                </p>
+              </div>
+
+              {/* Page list */}
+              <div style={{ maxHeight: 380, overflowY: 'auto', scrollbarWidth: 'none' }}>
+                {groups.map((group) => (
+                  <div key={group}>
+                    <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, padding: '8px 14px 4px' }}>
+                      {group}
+                    </p>
+                    {actions.filter((a) => a.group === group).map((a, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { a.action(); setOpen(false); }}
+                        style={{
+                          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                          padding: '7px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          gap: 8, textAlign: 'left',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                      >
+                        <div>
+                          <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#FFFFFF', margin: 0, lineHeight: 1.3 }}>{a.label}</p>
+                          {a.sub && <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', margin: '1px 0 0 0' }}>{a.sub}</p>}
+                        </div>
+                        <ChevronRight size={12} style={{ color: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer actions */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex' }}>
+                <button
+                  onClick={() => { setOpen(false); setTempHiddenKey(navKey); }}
+                  style={{
+                    flex: 1, background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '9px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    borderRight: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <Minimize2 size={11} style={{ color: 'rgba(255,255,255,0.5)' }} />
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>暫時關閉</span>
+                </button>
+                <button
+                  onClick={() => { setOpen(false); setDismissed(true); }}
+                  style={{
+                    flex: 1, background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '9px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  }}
+                >
+                  <ExitIcon size={11} style={{ color: 'rgba(239,68,68,0.7)' }} />
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(239,68,68,0.7)' }}>退出</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* FAB */}
+      <motion.button
+        onClick={() => setOpen((p) => !p)}
+        whileTap={{ scale: 0.9 }}
+        style={{
+          width: 40, height: 40, borderRadius: '50%',
+          background: open ? 'rgba(15,22,35,0.9)' : 'rgba(15,22,35,0.55)',
+          backdropFilter: 'blur(12px)',
+          border: '1.5px solid rgba(245,166,35,0.5)',
+          cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 16px rgba(15,22,35,0.3)',
+          transition: 'background 0.2s',
+        }}
+      >
+        <AnimatePresence mode="wait">
+          {open
+            ? <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                <X size={16} style={{ color: '#F5A623' }} />
+              </motion.div>
+            : <motion.div key="m" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                <Map size={15} style={{ color: '#F5A623' }} />
+              </motion.div>
+          }
+        </AnimatePresence>
+      </motion.button>
+    </div>
+  );
 }
 
 export default function App() {
@@ -55,6 +214,28 @@ export default function App() {
     gender: lang === 'en' ? 'M' : '男',
     age: 26,
   };
+
+  const navKey = `${screen}|${activeNav}|${selectedJobId ?? ''}|${showVerifyFlow}`;
+
+  const devActions: DevNavAction[] = [
+    // Base screens
+    { group: '基礎頁面', label: '歡迎頁', action: () => { setScreen('welcome'); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '基礎頁面', label: '登入 / 註冊', action: () => { setScreen('auth'); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    // Main tabs
+    { group: '主應用', label: '首頁職位', action: () => { setScreen('main'); setActiveNav(0); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '主應用', label: '排班', action: () => { setScreen('main'); setActiveNav(1); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '主應用', label: '消息', action: () => { setScreen('main'); setActiveNav(2); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '主應用', label: '個人中心', action: () => { setScreen('main'); setActiveNav(3); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    // Job detail
+    ...jobs.slice(0, 4).map((j) => ({
+      group: '職位詳情',
+      label: j.title['zh-HK'],
+      sub: j.company,
+      action: () => { setScreen('main'); setActiveNav(0); setSelectedJobId(j.id); setShowVerifyFlow(false); },
+    })),
+    // Overlays
+    { group: '認證流程', label: 'HKID 身份認證', sub: isVerified ? '目前已認證' : '目前未認證', action: () => { setScreen('main'); setShowVerifyFlow(true); } },
+  ];
 
   return (
     <div className="size-full flex items-center justify-center" style={{ background: '#DDE3EF' }}>
@@ -228,6 +409,9 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Dev navigator — always on top */}
+        <DevNavButton navKey={navKey} actions={devActions} />
       </div>
     </div>
   );
