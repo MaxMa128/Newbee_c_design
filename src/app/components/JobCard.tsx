@@ -35,11 +35,9 @@ export function JobCard({ job, lang, onClick }: JobCardProps) {
         <span className="rounded-md px-2 py-0.5" style={{ fontSize: '0.7rem', fontWeight: 700, background: '#EEF1F8', color: '#1A2B4A', border: '1px solid rgba(15,22,35,0.08)' }}>
           {job.jobType === 'full-time' ? t.fullTimeTag : job.jobType === 'part-time' ? t.partTimeTag : t.casualTag}
         </span>
-        {job.isDailyPay && (
-          <span className="rounded-md px-2 py-0.5" style={{ fontSize: '0.7rem', fontWeight: 700, background: '#DCFCE7', color: '#15803D', border: '1px solid rgba(21,128,61,0.18)' }}>
-            {t.dailyPayTag}
-          </span>
-        )}
+        <span className="rounded-md px-2 py-0.5" style={{ fontSize: '0.7rem', fontWeight: 600, background: '#F0F4FF', color: '#3B5BDB', border: '1px solid rgba(59,91,219,0.15)' }}>
+          {job.workCategory}
+        </span>
       </div>
 
       {/* Header: logo + title + salary */}

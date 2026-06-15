@@ -185,6 +185,7 @@ export default function App() {
   const [activeNav, setActiveNav] = useState(0);
   const [user, setUser] = useState<UserData | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [readOnlyJob, setReadOnlyJob] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [showVerifyFlow, setShowVerifyFlow] = useState(false);
 
@@ -302,7 +303,7 @@ export default function App() {
                   {activeNav === 0 && (
                     <motion.div key="jobs" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <HomePage lang={lang} onJobPress={(id) => setSelectedJobId(id)} />
+                      <HomePage lang={lang} onJobPress={(id) => { setSelectedJobId(id); setReadOnlyJob(false); }} />
                     </motion.div>
                   )}
                   {activeNav === 1 && (
@@ -327,6 +328,7 @@ export default function App() {
                         onLogout={handleLogout}
                         isVerified={isVerified}
                         onStartVerify={() => setShowVerifyFlow(true)}
+                        onViewJob={(id) => { setSelectedJobId(id); setReadOnlyJob(true); }}
                       />
                     </motion.div>
                   )}
@@ -348,12 +350,13 @@ export default function App() {
                       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                     >
                       <JobDetailPage
-                      job={job}
-                      lang={lang}
-                      isVerified={isVerified}
-                      onBack={() => setSelectedJobId(null)}
-                      onStartVerify={() => setShowVerifyFlow(true)}
-                    />
+                        job={job}
+                        lang={lang}
+                        isVerified={isVerified}
+                        onBack={() => { setSelectedJobId(null); setReadOnlyJob(false); }}
+                        onStartVerify={() => setShowVerifyFlow(true)}
+                        readOnly={readOnlyJob}
+                      />
                     </motion.div>
                   );
                 })()}

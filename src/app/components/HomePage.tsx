@@ -67,30 +67,24 @@ export function HomePage({ lang, onJobPress }: HomePageProps) {
     }
 
     if (activeTab !== 'all') list = list.filter((j) => j.jobType === activeTab);
-    if (filters.jobType !== 'all') list = list.filter((j) => j.jobType === filters.jobType);
-    if (filters.urgent) list = list.filter((j) => j.isUrgent);
-    if (filters.dailyPay) list = list.filter((j) => j.isDailyPay);
-    if (filters.district) list = list.filter((j) => j.district[lang] === filters.district);
-
-    if (filters.sortBy === 'salary') {
-      list.sort((a, b) => {
-        const toHr = (j: typeof a) =>
-          j.salaryPeriod === 'hourly' ? j.salary : j.salaryPeriod === 'daily' ? j.salary / 8 : j.salary / 160;
-        return toHr(b) - toHr(a);
-      });
-    } else {
-      list.sort((a, b) => {
-        if (a.isUrgent && !b.isUrgent) return -1;
-        if (!a.isUrgent && b.isUrgent) return 1;
-        return a.postedMinutes - b.postedMinutes;
-      });
+    if (filters.category) list = list.filter((j) => j.workCategory === filters.category);
+    if (filters.district) {
+      // District filter: match against district name (strip trailing 區 for partial match)
+      const d = filters.district.replace(/區$/, '');
+      list = list.filter((j) => j.district[lang].includes(d) || j.address[lang].includes(filters.district));
     }
+
+    // Default sort: urgent first, then by recency
+    list.sort((a, b) => {
+      if (a.isUrgent && !b.isUrgent) return -1;
+      if (!a.isUrgent && b.isUrgent) return 1;
+      return a.postedMinutes - b.postedMinutes;
+    });
 
     return list;
   }, [search, activeTab, filters, lang]);
 
-  const hasActiveFilters =
-    filters.jobType !== 'all' || filters.district !== '' || filters.urgent || filters.dailyPay || filters.sortBy !== 'latest';
+  const hasActiveFilters = filters.category !== '' || filters.district !== '';
 
   return (
     <div className="size-full flex flex-col overflow-hidden" style={{ background: '#F7F8FC' }}>

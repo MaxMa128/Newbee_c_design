@@ -15,6 +15,7 @@ interface JobDetailPageProps {
   isVerified: boolean;
   onBack: () => void;
   onStartVerify: () => void;
+  readOnly?: boolean;
 }
 
 function InfoRow({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
@@ -51,7 +52,7 @@ const applyStatusConfig: Record<ApplyStatus, { label: string; bg: string; color:
   rejected: { label: '未獲取錄', bg: '#FEE2E2', color: '#D93025', desc: '很遺憾此次未獲取錄，可繼續申請其他職位' },
 };
 
-export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify }: JobDetailPageProps) {
+export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, readOnly = false }: JobDetailPageProps) {
   const t = translations[lang];
   const [applyStatus, setApplyStatus] = useState<ApplyStatus>('idle');
   const [showCopied, setShowCopied] = useState(false);
@@ -274,6 +275,18 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify }: 
         {/* Store info */}
         <SectionCard title="門店資訊">
           <InfoRow
+            icon={<Building2 size={14} style={{ color: '#6B7A99' }} />}
+            label="門店名稱"
+            value={job.store[lang]}
+          />
+          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
+          <InfoRow
+            icon={<MapPin size={14} style={{ color: '#6B7A99' }} />}
+            label="工作地區"
+            value={job.region[lang]}
+          />
+          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
+          <InfoRow
             icon={<MapPin size={14} style={{ color: '#6B7A99' }} />}
             label="詳細地址"
             value={job.address[lang]}
@@ -327,12 +340,14 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify }: 
             <div className="flex-1">
               <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{job.company}</p>
               <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center gap-1">
-                  <Building2 size={12} style={{ color: '#9CA3AF' }} />
-                  <span style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{job.companySize}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <Building2 size={12} style={{ color: '#9CA3AF' }} />
+                    <span style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{job.companySize}</span>
+                  </div>
+                  <span style={{ color: '#D1D5DB', fontSize: '0.7rem' }}>·</span>
+                  <span style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{job.companyIndustry}</span>
                 </div>
-                <span style={{ color: '#D1D5DB', fontSize: '0.7rem' }}>·</span>
-                <span style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{job.category[lang]}</span>
               </div>
             </div>
           </div>
@@ -350,7 +365,13 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify }: 
         className="shrink-0 px-4 py-3 flex gap-3"
         style={{ background: '#FFFFFF', borderTop: '1px solid rgba(15,22,35,0.06)', boxShadow: '0 -4px 20px rgba(15,22,35,0.06)' }}
       >
-        {applyStatus === 'idle' ? (
+        {readOnly && (
+          <div className="flex-1 rounded-xl py-3 flex items-center justify-center gap-2" style={{ background: '#EEF1F8' }}>
+            <FileText size={14} style={{ color: '#9CA3AF' }} />
+            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#9CA3AF' }}>僅供查閱，無法操作</span>
+          </div>
+        )}
+        {!readOnly && (applyStatus === 'idle' ? (
           <button
             onClick={handleApply}
             className="flex-1 rounded-xl py-3.5 transition-all active:scale-[0.98]"
@@ -376,7 +397,7 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify }: 
               {applyStatusConfig[applyStatus].label}
             </span>
           </div>
-        )}
+        ))}
       </div>
 
       {/* Verify prompt sheet — shown when unverified user tries to apply */}

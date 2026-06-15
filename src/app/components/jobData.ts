@@ -3,17 +3,27 @@ import { Language } from './i18n';
 export type JobType = 'full-time' | 'part-time' | 'casual';
 export type SalaryPeriod = 'hourly' | 'daily' | 'monthly';
 
+export type CompanyIndustry = '製造業' | 'IT/互聯網' | '餐飲/酒店' | '建築業' | '家政/物業' | '其他';
+
+export const WORK_CATEGORIES = [
+  '服務業/零售門市', '餐飲業', '活動推廣', '教育', '物流運輸',
+  '客戶服務', '清潔', '推銷和中介', '建造業', '保安及物業', '生產及保障', '維修技術',
+] as const;
+
 export interface Job {
   id: number;
   title: Record<Language, string>;
   company: string;
   companyIntro: Record<Language, string>;
   companySize: string;
+  companyIndustry: CompanyIndustry;
+  workCategory: string;
   store: Record<Language, string>;
   address: Record<Language, string>;
   lat: number;
   lng: number;
   district: Record<Language, string>;
+  region: Record<Language, string>;
   mtr: Record<Language, string>;
   salary: number;
   salaryMax?: number;
@@ -37,6 +47,8 @@ export const jobs: Job[] = [
     id: 1,
     title: { 'zh-HK': '展覽場地助理', 'zh-CN': '展览场地助理', en: 'Exhibition Hall Assistant' },
     company: 'HK Convention & Exhibition Centre',
+    companyIndustry: '其他' as const,
+    workCategory: '活動推廣',
     companyIntro: {
       'zh-HK': '香港會議展覽中心是亞洲最具規模的會議展覽場地之一，承辦各類國際展覽、會議及企業活動，每年接待逾百萬訪客。',
       'zh-CN': '香港会议展览中心是亚洲最具规模的会议展览场地之一，承办各类国际展览、会议及企业活动，每年接待逾百万访客。',
@@ -48,6 +60,7 @@ export const jobs: Job[] = [
     lat: 22.2830,
     lng: 114.1733,
     district: { 'zh-HK': '灣仔', 'zh-CN': '湾仔', en: 'Wan Chai' },
+    region: { 'zh-HK': '香港島 · 灣仔區', 'zh-CN': '香港岛 · 湾仔区', en: 'HK Island · Wan Chai District' },
     mtr: { 'zh-HK': '灣仔站', 'zh-CN': '湾仔站', en: 'Wan Chai MTR' },
     salary: 80,
     salaryMax: 90,
@@ -77,6 +90,8 @@ export const jobs: Job[] = [
     id: 2,
     title: { 'zh-HK': '餐飲服務員', 'zh-CN': '餐饮服务员', en: 'Restaurant Server' },
     company: '美食集團',
+    companyIndustry: '餐飲/酒店' as const,
+    workCategory: '餐飲業',
     companyIntro: {
       'zh-HK': '美食集團旗下經營多間香港特色茶餐廳及中式餐廳，致力提供地道港式飲食體驗，於港九新界設有逾30間分店。',
       'zh-CN': '美食集团旗下经营多间香港特色茶餐厅及中式餐厅，致力提供地道港式饮食体验，于港九新界设有逾30间分店。',
@@ -88,6 +103,7 @@ export const jobs: Job[] = [
     lat: 22.2797,
     lng: 114.1826,
     district: { 'zh-HK': '銅鑼灣', 'zh-CN': '铜锣湾', en: 'Causeway Bay' },
+    region: { 'zh-HK': '香港島 · 灣仔區', 'zh-CN': '香港岛 · 湾仔区', en: 'HK Island · Wan Chai District' },
     mtr: { 'zh-HK': '銅鑼灣站', 'zh-CN': '铜锣湾站', en: 'Causeway Bay MTR' },
     salary: 80,
     salaryMax: 90,
@@ -117,6 +133,8 @@ export const jobs: Job[] = [
     id: 3,
     title: { 'zh-HK': '店舖理貨員', 'zh-CN': '店铺理货员', en: 'Stock Replenisher' },
     company: '零售連鎖',
+    companyIndustry: '其他' as const,
+    workCategory: '服務業/零售門市',
     companyIntro: {
       'zh-HK': '零售連鎖是本港領先的生活百貨零售商，產品涵蓋日用品、食品、家居用品等，在全港設有逾80間門店。',
       'zh-CN': '零售连锁是本港领先的生活百货零售商，产品涵盖日用品、食品、家居用品等，在全港设有逾80间门店。',
@@ -128,6 +146,7 @@ export const jobs: Job[] = [
     lat: 22.3816,
     lng: 114.1879,
     district: { 'zh-HK': '沙田', 'zh-CN': '沙田', en: 'Sha Tin' },
+    region: { 'zh-HK': '新界 · 沙田區', 'zh-CN': '新界 · 沙田区', en: 'New Territories · Sha Tin District' },
     mtr: { 'zh-HK': '沙田站', 'zh-CN': '沙田站', en: 'Sha Tin MTR' },
     salary: 2500,
     salaryMax: 3000,
@@ -157,6 +176,8 @@ export const jobs: Job[] = [
     id: 4,
     title: { 'zh-HK': '倉務員（散工）', 'zh-CN': '仓务员（散工）', en: 'Warehouse Picker (Casual)' },
     company: 'SF Express 順豐速運',
+    companyIndustry: '其他' as const,
+    workCategory: '物流運輸',
     companyIntro: {
       'zh-HK': '順豐速運是中國最具規模的快遞物流企業之一，在香港設有完善的配送網絡及多個分揀中心，提供本地及跨境速遞服務。',
       'zh-CN': '顺丰速运是中国最具规模的快递物流企业之一，在香港设有完善的配送网络及多个分拣中心，提供本地及跨境速递服务。',
@@ -168,6 +189,7 @@ export const jobs: Job[] = [
     lat: 22.3707,
     lng: 114.1121,
     district: { 'zh-HK': '荃灣', 'zh-CN': '荃湾', en: 'Tsuen Wan' },
+    region: { 'zh-HK': '新界 · 荃灣區', 'zh-CN': '新界 · 荃湾区', en: 'New Territories · Tsuen Wan District' },
     mtr: { 'zh-HK': '荃灣站', 'zh-CN': '荃湾站', en: 'Tsuen Wan MTR' },
     salary: 950,
     salaryPeriod: 'daily',
@@ -196,6 +218,8 @@ export const jobs: Job[] = [
     id: 5,
     title: { 'zh-HK': '零售店員（兼職）', 'zh-CN': '零售店员（兼职）', en: 'Retail Assistant (Part-time)' },
     company: 'Uniqlo 優衣庫',
+    companyIndustry: '其他' as const,
+    workCategory: '服務業/零售門市',
     companyIntro: {
       'zh-HK': 'Uniqlo優衣庫是日本迅銷集團旗下的全球連鎖服裝品牌，以高品質日常基本款服飾見稱，在香港設有多間旗艦店及分店。',
       'zh-CN': 'Uniqlo优衣库是日本迅销集团旗下的全球连锁服装品牌，以高品质日常基本款服饰见称，在香港设有多间旗舰店及分店。',
@@ -207,6 +231,7 @@ export const jobs: Job[] = [
     lat: 22.3124,
     lng: 114.2257,
     district: { 'zh-HK': '觀塘', 'zh-CN': '观塘', en: 'Kwun Tong' },
+    region: { 'zh-HK': '九龍 · 觀塘區', 'zh-CN': '九龙 · 观塘区', en: 'Kowloon · Kwun Tong District' },
     mtr: { 'zh-HK': '觀塘站', 'zh-CN': '观塘站', en: 'Kwun Tong MTR' },
     salary: 72,
     salaryPeriod: 'hourly',
@@ -235,6 +260,8 @@ export const jobs: Job[] = [
     id: 6,
     title: { 'zh-HK': '保安員（夜班）', 'zh-CN': '保安员（夜班）', en: 'Security Guard (Night Shift)' },
     company: 'Galaxy Security',
+    companyIndustry: '家政/物業' as const,
+    workCategory: '保安及物業',
     companyIntro: {
       'zh-HK': 'Galaxy Security是本港具實力的保安服務公司，為商業大廈、住宅及商場提供專業保安服務，持有保安行業監管局認可牌照。',
       'zh-CN': 'Galaxy Security是本港具实力的保安服务公司，为商业大厦、住宅及商场提供专业保安服务，持有保安行业监管局认可牌照。',
@@ -246,6 +273,7 @@ export const jobs: Job[] = [
     lat: 22.3078,
     lng: 114.2596,
     district: { 'zh-HK': '將軍澳', 'zh-CN': '将军澳', en: 'Tseung Kwan O' },
+    region: { 'zh-HK': '新界 · 西貢區', 'zh-CN': '新界 · 西贡区', en: 'New Territories · Sai Kung District' },
     mtr: { 'zh-HK': '坑口站', 'zh-CN': '坑口站', en: 'Hang Hau MTR' },
     salary: 16800,
     salaryPeriod: 'monthly',
@@ -274,6 +302,8 @@ export const jobs: Job[] = [
     id: 7,
     title: { 'zh-HK': '地盤雜工（散工）', 'zh-CN': '地盘杂工（散工）', en: 'Construction Labourer' },
     company: 'Hip Hing Construction',
+    companyIndustry: '建築業' as const,
+    workCategory: '建造業',
     companyIntro: {
       'zh-HK': '協興建築是香港具規模的承建商之一，承接各類公私營建築工程，旗下工地分布全港各區，注重安全管理及員工福利。',
       'zh-CN': '协兴建筑是香港具规模的承建商之一，承接各类公私营建筑工程，旗下工地分布全港各区，注重安全管理及员工福利。',
@@ -285,6 +315,7 @@ export const jobs: Job[] = [
     lat: 22.4452,
     lng: 114.0338,
     district: { 'zh-HK': '元朗', 'zh-CN': '元朗', en: 'Yuen Long' },
+    region: { 'zh-HK': '新界 · 元朗區', 'zh-CN': '新界 · 元朗区', en: 'New Territories · Yuen Long District' },
     mtr: { 'zh-HK': '元朗站', 'zh-CN': '元朗站', en: 'Yuen Long MTR' },
     salary: 1200,
     salaryPeriod: 'daily',
@@ -313,6 +344,8 @@ export const jobs: Job[] = [
     id: 8,
     title: { 'zh-HK': '派傳單推廣員', 'zh-CN': '派传单推广员', en: 'Promoter' },
     company: 'MediaLink Promotions',
+    companyIndustry: '其他' as const,
+    workCategory: '推銷和中介',
     companyIntro: {
       'zh-HK': 'MediaLink是香港本地市場推廣公司，專注於地推活動、品牌推廣及戶外宣傳，服務涵蓋各類消費品及零售品牌。',
       'zh-CN': 'MediaLink是香港本地市场推广公司，专注于地推活动、品牌推广及户外宣传，服务涵盖各类消费品及零售品牌。',
@@ -324,6 +357,7 @@ export const jobs: Job[] = [
     lat: 22.3295,
     lng: 114.1628,
     district: { 'zh-HK': '深水埗', 'zh-CN': '深水埗', en: 'Sham Shui Po' },
+    region: { 'zh-HK': '九龍 · 深水埗區', 'zh-CN': '九龙 · 深水埗区', en: 'Kowloon · Sham Shui Po District' },
     mtr: { 'zh-HK': '深水埗站', 'zh-CN': '深水埗站', en: 'Sham Shui Po MTR' },
     salary: 700,
     salaryPeriod: 'daily',

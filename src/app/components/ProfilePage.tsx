@@ -77,13 +77,23 @@ const walletTxns = [
   { id: 6, type: 'out' as const, status: 'pending' as const, amount: 750, desc: { 'zh-HK': '出糧申請中', 'zh-CN': '出粮申请中', en: 'Payout Requested' }, job: { 'zh-HK': '邦芒公司', 'zh-CN': '邦芒公司', en: 'BM Platform' }, company: '', date: '2026-06-10' },
 ];
 
-const jobHistoryItems = [
-  { id: 1, title: { 'zh-HK': '展覽助理', 'zh-CN': '展览助理', en: 'Exhibition Assistant' }, company: 'HKCEC', district: { 'zh-HK': '灣仔', 'zh-CN': '湾仔', en: 'Wan Chai' }, date: '2026-06-12', status: 'scheduled' as const },
-  { id: 2, title: { 'zh-HK': '倉務員', 'zh-CN': '仓务员', en: 'Warehouse Picker' }, company: 'SF Express', district: { 'zh-HK': '荃灣', 'zh-CN': '荃湾', en: 'Tsuen Wan' }, date: '2026-05-28', status: 'completed' as const },
-  { id: 3, title: { 'zh-HK': '餐飲服務員', 'zh-CN': '餐饮服务员', en: 'Restaurant Server' }, company: '大家樂', district: { 'zh-HK': '旺角', 'zh-CN': '旺角', en: 'Mong Kok' }, date: '2026-05-15', status: 'rejected' as const },
-  { id: 4, title: { 'zh-HK': '保安員', 'zh-CN': '保安员', en: 'Security Guard' }, company: 'Galaxy Security', district: { 'zh-HK': '將軍澳', 'zh-CN': '将军澳', en: 'Tseung Kwan O' }, date: '2026-05-01', status: 'completed' as const },
-  { id: 5, title: { 'zh-HK': '零售店員', 'zh-CN': '零售店员', en: 'Retail Assistant' }, company: 'Uniqlo', district: { 'zh-HK': '觀塘', 'zh-CN': '观塘', en: 'Kwun Tong' }, date: '2026-04-18', status: 'pending' as const },
-  { id: 6, title: { 'zh-HK': '派傳單推廣員', 'zh-CN': '派传单推广员', en: 'Promoter' }, company: 'MediaLink', district: { 'zh-HK': '深水埗', 'zh-CN': '深水埗', en: 'Sham Shui Po' }, date: '2026-04-05', status: 'completed' as const },
+type HistoryStatus = 'approved' | 'pending' | 'closed';
+
+const jobHistoryItems: Array<{
+  id: number;
+  jobId: number;
+  title: Record<string, string>;
+  company: string;
+  district: Record<string, string>;
+  date: string;
+  status: HistoryStatus;
+}> = [
+  { id: 1, jobId: 1, title: { 'zh-HK': '展覽助理', 'zh-CN': '展览助理', en: 'Exhibition Assistant' }, company: 'HKCEC', district: { 'zh-HK': '灣仔', 'zh-CN': '湾仔', en: 'Wan Chai' }, date: '2026-06-12', status: 'approved' },
+  { id: 2, jobId: 4, title: { 'zh-HK': '倉務員', 'zh-CN': '仓务员', en: 'Warehouse Picker' }, company: 'SF Express', district: { 'zh-HK': '荃灣', 'zh-CN': '荃湾', en: 'Tsuen Wan' }, date: '2026-05-28', status: 'closed' },
+  { id: 3, jobId: 2, title: { 'zh-HK': '餐飲服務員', 'zh-CN': '餐饮服务员', en: 'Restaurant Server' }, company: '美食集團', district: { 'zh-HK': '銅鑼灣', 'zh-CN': '铜锣湾', en: 'Causeway Bay' }, date: '2026-05-15', status: 'pending' },
+  { id: 4, jobId: 6, title: { 'zh-HK': '保安員', 'zh-CN': '保安员', en: 'Security Guard' }, company: 'Galaxy Security', district: { 'zh-HK': '將軍澳', 'zh-CN': '将军澳', en: 'Tseung Kwan O' }, date: '2026-05-01', status: 'approved' },
+  { id: 5, jobId: 5, title: { 'zh-HK': '零售店員', 'zh-CN': '零售店员', en: 'Retail Assistant' }, company: 'Uniqlo', district: { 'zh-HK': '觀塘', 'zh-CN': '观塘', en: 'Kwun Tong' }, date: '2026-04-18', status: 'pending' },
+  { id: 6, jobId: 8, title: { 'zh-HK': '派傳單推廣員', 'zh-CN': '派传单推广员', en: 'Promoter' }, company: 'MediaLink', district: { 'zh-HK': '深水埗', 'zh-CN': '深水埗', en: 'Sham Shui Po' }, date: '2026-04-05', status: 'closed' },
 ];
 
 const DEGREE_OPTIONS = ['中學', '大專/高職', '大學本科', '碩士', '博士', '其他'];
@@ -1634,51 +1644,75 @@ function TempPoolView({ lang, t }: { lang: Language; t: ReturnType<typeof transl
   );
 }
 
-type JobFilter = 'all' | 'scheduled' | 'pending' | 'rejected';
+type JobFilter = 'approved' | 'pending' | 'closed';
 
-function JobHistoryView({ lang, t }: { lang: Language; t: ReturnType<typeof translations[Language]> }) {
-  const [filter, setFilter] = useState<JobFilter>('all');
+const historyStatusMeta: Record<HistoryStatus, { label: string; bg: string; color: string }> = {
+  approved: { label: '已通過', bg: '#DCFCE7', color: '#15803D' },
+  pending:  { label: '申請中', bg: '#FEF3DC', color: '#D4891A' },
+  closed:   { label: '已關閉', bg: '#EEF1F8', color: '#6B7A99' },
+};
 
-  const statusMap: Record<string, { label: string; bg: string; color: string }> = {
-    pending: { label: t.statusPending, bg: '#FEF3DC', color: '#D4891A' },
-    scheduled: { label: t.statusScheduled, bg: '#DCFCE7', color: '#15803D' },
-    rejected: { label: t.statusRejected, bg: '#FEE2E2', color: '#D93025' },
-    completed: { label: t.statusCompleted, bg: '#EEF1F8', color: '#6B7A99' },
-  };
+function JobHistoryView({ lang, t, onViewJob }: {
+  lang: Language;
+  t: ReturnType<typeof translations[Language]>;
+  onViewJob?: (jobId: number) => void;
+}) {
+  const [filter, setFilter] = useState<JobFilter | null>(null);
 
-  const jobFilterTabs: { key: JobFilter; label: string }[] = [
-    { key: 'all', label: '全部' },
-    { key: 'scheduled', label: '已通過' },
-    { key: 'pending', label: '申請中' },
-    { key: 'rejected', label: '已拒絕' },
+  const tabs: { key: JobFilter; label: string }[] = [
+    { key: 'approved', label: '已通過' },
+    { key: 'pending',  label: '申請中' },
+    { key: 'closed',   label: '已關閉' },
   ];
 
-  const filtered = filter === 'all' ? jobHistoryItems : jobHistoryItems.filter((item) => item.status === filter);
+  const filtered = filter ? jobHistoryItems.filter((item) => item.status === filter) : jobHistoryItems;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Filter tabs */}
-      <div className="flex gap-2 px-4 pt-4 pb-0 shrink-0">
-        {jobFilterTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setFilter(tab.key)}
-            className="rounded-xl px-3 py-1.5 transition-all"
-            style={{
-              background: filter === tab.key ? '#0F1623' : '#FFFFFF',
-              color: filter === tab.key ? '#FFFFFF' : '#6B7A99',
-              border: filter === tab.key ? 'none' : `1.5px solid rgba(15,22,35,0.1)`,
-              fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-              boxShadow: filter === tab.key ? '0 2px 8px rgba(15,22,35,0.2)' : CARD_SHADOW,
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Tabs */}
+      <div className="flex gap-2 px-4 pt-4 pb-2 shrink-0">
+        <button
+          onClick={() => setFilter(null)}
+          className="rounded-xl px-3 py-1.5"
+          style={{
+            background: filter === null ? '#0F1623' : '#FFFFFF',
+            color: filter === null ? '#FFFFFF' : '#6B7A99',
+            border: filter === null ? 'none' : '1.5px solid rgba(15,22,35,0.1)',
+            fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+            boxShadow: filter === null ? '0 2px 8px rgba(15,22,35,0.2)' : CARD_SHADOW,
+          }}
+        >
+          全部
+        </button>
+        {tabs.map((tab) => {
+          const active = filter === tab.key;
+          const meta = historyStatusMeta[tab.key];
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(active ? null : tab.key)}
+              className="rounded-xl px-3 py-1.5"
+              style={{
+                background: active ? '#0F1623' : '#FFFFFF',
+                color: active ? '#FFFFFF' : '#6B7A99',
+                border: active ? 'none' : '1.5px solid rgba(15,22,35,0.1)',
+                fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+                boxShadow: active ? '0 2px 8px rgba(15,22,35,0.2)' : CARD_SHADOW,
+              }}
+            >
+              {tab.label}
+              {!active && (
+                <span style={{ marginLeft: 4, fontSize: '0.68rem', fontWeight: 700, color: meta.color }}>
+                  {jobHistoryItems.filter((i) => i.status === tab.key).length}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3" style={{ scrollbarWidth: 'none' }}>
-        <p style={{ fontSize: '0.75rem', color: '#9CA3AF', fontWeight: 600 }}>
+      <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-3" style={{ scrollbarWidth: 'none' }}>
+        <p style={{ fontSize: '0.73rem', color: '#9CA3AF', fontWeight: 600 }}>
           {filtered.length} {t.jobRecordCount}
         </p>
         {filtered.length === 0 && (
@@ -1687,16 +1721,28 @@ function JobHistoryView({ lang, t }: { lang: Language; t: ReturnType<typeof tran
           </div>
         )}
         {filtered.map((item, i) => {
-          const s = statusMap[item.status];
+          const meta = historyStatusMeta[item.status];
           return (
-            <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.05 }} className="rounded-2xl p-4" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, delay: i * 0.05 }}
+              onClick={() => onViewJob?.(item.jobId)}
+              className="rounded-2xl p-4 transition-all active:scale-[0.99]"
+              style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER, cursor: 'pointer' }}
+            >
               <div className="flex items-start justify-between gap-2">
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{item.title[lang]}</h3>
                   <p style={{ fontSize: '0.78rem', color: '#6B7A99', margin: '3px 0 0 0' }}>{item.company} · {item.district[lang]}</p>
                   <p style={{ fontSize: '0.73rem', color: '#9CA3AF', margin: '3px 0 0 0' }}>{item.date}</p>
                 </div>
-                <span className="shrink-0 rounded-lg px-2.5 py-1" style={{ background: s.bg, color: s.color, fontSize: '0.72rem', fontWeight: 700 }}>{s.label}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="rounded-lg px-2.5 py-1" style={{ background: meta.bg, color: meta.color, fontSize: '0.72rem', fontWeight: 700 }}>
+                    {meta.label}
+                  </span>
+                  <ChevronRight size={14} style={{ color: '#CBD1E1' }} />
+                </div>
               </div>
             </motion.div>
           );
@@ -1959,7 +2005,7 @@ function initEditData(user: UserData): ProfileEditData {
   };
 }
 
-export function ProfilePage({ lang, onLangChange, user, onLogout, isVerified, onStartVerify }: ProfilePageProps) {
+export function ProfilePage({ lang, onLangChange, user, onLogout, isVerified, onStartVerify, onViewJob }: ProfilePageProps & { onViewJob?: (jobId: number) => void }) {
   const t = translations[lang];
   const [stack, setStack] = useState<ProfileView[]>(['main']);
   const [editData, setEditData] = useState<ProfileEditData>(() => initEditData(user));
@@ -2018,7 +2064,7 @@ export function ProfilePage({ lang, onLangChange, user, onLogout, isVerified, on
             <TempPoolView lang={lang} t={t} />
           )}
           {current === 'job-history' && (
-            <JobHistoryView lang={lang} t={t} />
+            <JobHistoryView lang={lang} t={t} onViewJob={onViewJob} />
           )}
           {current === 'edit-profile' && (
             <EditProfileView
