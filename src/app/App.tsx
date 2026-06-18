@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Briefcase, CalendarDays, MessageSquare, User, Map, ChevronRight, X, Minimize2, LogOut as ExitIcon } from 'lucide-react';
+import { Briefcase, FileText, MessageSquare, User, Map, ChevronRight, X, Minimize2, LogOut as ExitIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { WelcomePage } from './components/WelcomePage';
 import { AuthPage } from './components/AuthPage';
 import { HomePage } from './components/HomePage';
-import { ProfilePage } from './components/ProfilePage';
+import { ProfilePage, ProfileEditData, initEditData } from './components/ProfilePage';
 import { ComingSoon } from './components/ComingSoon';
+import { JobHistoryPage } from './components/JobHistoryPage';
 import { JobDetailPage } from './components/JobDetailPage';
 import { HKIDVerifyFlow } from './components/HKIDVerifyFlow';
 import { Language, translations } from './components/i18n';
@@ -188,6 +189,11 @@ export default function App() {
   const [readOnlyJob, setReadOnlyJob] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [showVerifyFlow, setShowVerifyFlow] = useState(false);
+  const [editData, setEditData] = useState<ProfileEditData>(() => initEditData({
+    name: '陳大文', phone: '+852 98765432', gender: '男', age: 26,
+  }));
+  const [forceEditProfile, setForceEditProfile] = useState(false);
+  const [pendingJobAfterEdit, setPendingJobAfterEdit] = useState<number | null>(null);
 
   const t = translations[lang];
 
@@ -202,9 +208,29 @@ export default function App() {
     setActiveNav(0);
   }
 
+  function handleNeedEditProfile() {
+    setPendingJobAfterEdit(selectedJobId);
+    setSelectedJobId(null);
+    setReadOnlyJob(false);
+    setActiveNav(3);
+    setForceEditProfile(true);
+  }
+
+  function handleEditSaved() {
+    if (pendingJobAfterEdit !== null) {
+      const jobId = pendingJobAfterEdit;
+      setPendingJobAfterEdit(null);
+      // Brief delay so ProfilePage can animate back to main first
+      setTimeout(() => {
+        setSelectedJobId(jobId);
+        setReadOnlyJob(false);
+      }, 320);
+    }
+  }
+
   const navItems = [
     { icon: Briefcase, label: t.findJobs },
-    { icon: CalendarDays, label: t.schedule },
+    { icon: FileText, label: t.jobHistory },
     { icon: MessageSquare, label: t.messages },
     { icon: User, label: t.profile },
   ];
@@ -224,7 +250,7 @@ export default function App() {
     { group: '基礎頁面', label: '登入 / 註冊', action: () => { setScreen('auth'); setSelectedJobId(null); setShowVerifyFlow(false); } },
     // Main tabs
     { group: '主應用', label: '首頁職位', action: () => { setScreen('main'); setActiveNav(0); setSelectedJobId(null); setShowVerifyFlow(false); } },
-    { group: '主應用', label: '排班', action: () => { setScreen('main'); setActiveNav(1); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '主應用', label: '求職記錄', action: () => { setScreen('main'); setActiveNav(1); setSelectedJobId(null); setShowVerifyFlow(false); } },
     { group: '主應用', label: '消息', action: () => { setScreen('main'); setActiveNav(2); setSelectedJobId(null); setShowVerifyFlow(false); } },
     { group: '主應用', label: '個人中心', action: () => { setScreen('main'); setActiveNav(3); setSelectedJobId(null); setShowVerifyFlow(false); } },
     // Job detail
@@ -307,9 +333,9 @@ export default function App() {
                     </motion.div>
                   )}
                   {activeNav === 1 && (
-                    <motion.div key="schedule" className="absolute inset-0"
+                    <motion.div key="job-history" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <ComingSoon lang={lang} tab="schedule" />
+                      <JobHistoryPage lang={lang} onViewJob={(id) => { setSelectedJobId(id); setReadOnlyJob(true); }} />
                     </motion.div>
                   )}
                   {activeNav === 2 && (
@@ -329,6 +355,11 @@ export default function App() {
                         isVerified={isVerified}
                         onStartVerify={() => setShowVerifyFlow(true)}
                         onViewJob={(id) => { setSelectedJobId(id); setReadOnlyJob(true); }}
+                        editData={editData}
+                        onEditDataChange={setEditData}
+                        forceEditProfile={forceEditProfile}
+                        onForceConsumed={() => setForceEditProfile(false)}
+                        onEditSaved={handleEditSaved}
                       />
                     </motion.div>
                   )}
@@ -356,6 +387,8 @@ export default function App() {
                         onBack={() => { setSelectedJobId(null); setReadOnlyJob(false); }}
                         onStartVerify={() => setShowVerifyFlow(true)}
                         readOnly={readOnlyJob}
+                        editData={!readOnlyJob ? editData : undefined}
+                        onNeedEditProfile={!readOnlyJob ? handleNeedEditProfile : undefined}
                       />
                     </motion.div>
                   );

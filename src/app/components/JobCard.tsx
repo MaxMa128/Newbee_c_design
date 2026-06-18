@@ -1,4 +1,4 @@
-import { MapPin, Clock, Users } from 'lucide-react';
+import { MapPin, Clock } from 'lucide-react';
 import { Language, translations } from './i18n';
 import { Job, formatTime } from './jobData';
 
@@ -83,12 +83,6 @@ export function JobCard({ job, lang, onClick }: JobCardProps) {
           <Clock size={12} style={{ color: '#9CA3AF', flexShrink: 0 }} />
           <span style={{ fontSize: '0.74rem', color: '#9CA3AF' }}>
             {job.date[lang]} · {formatTime(job.postedMinutes, lang)}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Users size={12} style={{ color: '#9CA3AF', flexShrink: 0 }} />
-          <span style={{ fontSize: '0.74rem', color: '#9CA3AF' }}>
-            {t.spotsLeft}{job.remainingSpots}{lang !== 'en' ? '人' : ''}
           </span>
         </div>
       </div>

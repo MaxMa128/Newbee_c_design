@@ -1,7 +1,7 @@
 import { Language } from './i18n';
 
 export type JobType = 'full-time' | 'part-time' | 'casual';
-export type SalaryPeriod = 'hourly' | 'daily' | 'monthly';
+export type SalaryPeriod = 'hourly' | 'monthly';
 
 export type CompanyIndustry = '製造業' | 'IT/互聯網' | '餐飲/酒店' | '建築業' | '家政/物業' | '其他';
 
@@ -169,7 +169,7 @@ export const jobs: Job[] = [
       en: ['No specific certificate required'],
     },
     headcount: 2,
-    remainingSpots: 1,
+    remainingSpots: 0,
     date: { 'zh-HK': '長期', 'zh-CN': '长期', en: 'Ongoing' },
   },
   {
@@ -191,8 +191,8 @@ export const jobs: Job[] = [
     district: { 'zh-HK': '荃灣', 'zh-CN': '荃湾', en: 'Tsuen Wan' },
     region: { 'zh-HK': '新界 · 荃灣區', 'zh-CN': '新界 · 荃湾区', en: 'New Territories · Tsuen Wan District' },
     mtr: { 'zh-HK': '荃灣站', 'zh-CN': '荃湾站', en: 'Tsuen Wan MTR' },
-    salary: 950,
-    salaryPeriod: 'daily',
+    salary: 119,
+    salaryPeriod: 'hourly',
     jobType: 'casual',
     isUrgent: true,
     isDailyPay: true,
@@ -317,8 +317,8 @@ export const jobs: Job[] = [
     district: { 'zh-HK': '元朗', 'zh-CN': '元朗', en: 'Yuen Long' },
     region: { 'zh-HK': '新界 · 元朗區', 'zh-CN': '新界 · 元朗区', en: 'New Territories · Yuen Long District' },
     mtr: { 'zh-HK': '元朗站', 'zh-CN': '元朗站', en: 'Yuen Long MTR' },
-    salary: 1200,
-    salaryPeriod: 'daily',
+    salary: 150,
+    salaryPeriod: 'hourly',
     jobType: 'casual',
     isUrgent: false,
     isDailyPay: true,
@@ -359,8 +359,8 @@ export const jobs: Job[] = [
     district: { 'zh-HK': '深水埗', 'zh-CN': '深水埗', en: 'Sham Shui Po' },
     region: { 'zh-HK': '九龍 · 深水埗區', 'zh-CN': '九龙 · 深水埗区', en: 'Kowloon · Sham Shui Po District' },
     mtr: { 'zh-HK': '深水埗站', 'zh-CN': '深水埗站', en: 'Sham Shui Po MTR' },
-    salary: 700,
-    salaryPeriod: 'daily',
+    salary: 88,
+    salaryPeriod: 'hourly',
     jobType: 'casual',
     isUrgent: true,
     isDailyPay: true,

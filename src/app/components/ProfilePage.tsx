@@ -5,7 +5,8 @@ import {
   Briefcase, Award, Upload, Check, Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Language, LANG_LABELS, LANG_NAMES, translations, districts, jobCategories } from './i18n';
+import { Language, LANG_LABELS, LANG_NAMES, translations } from './i18n';
+import { JobHistoryView } from './JobHistoryView';
 
 interface UserData {
   name: string;
@@ -14,7 +15,7 @@ interface UserData {
   age: number;
 }
 
-type ProfileView = 'main' | 'settings' | 'wallet' | 'payout' | 'temp-pool' | 'job-history' | 'edit-profile' | 'resume-preview';
+type ProfileView = 'main' | 'settings' | 'wallet' | 'payout' | 'job-history' | 'edit-profile' | 'resume-preview';
 
 interface ProfilePageProps {
   lang: Language;
@@ -23,6 +24,11 @@ interface ProfilePageProps {
   onLogout: () => void;
   isVerified?: boolean;
   onStartVerify?: () => void;
+  editData: ProfileEditData;
+  onEditDataChange: (d: ProfileEditData) => void;
+  forceEditProfile?: boolean;
+  onForceConsumed?: () => void;
+  onEditSaved?: () => void;
 }
 
 export interface EducationEntry {
@@ -77,24 +83,6 @@ const walletTxns = [
   { id: 6, type: 'out' as const, status: 'pending' as const, amount: 750, desc: { 'zh-HK': '出糧申請中', 'zh-CN': '出粮申请中', en: 'Payout Requested' }, job: { 'zh-HK': '邦芒公司', 'zh-CN': '邦芒公司', en: 'BM Platform' }, company: '', date: '2026-06-10' },
 ];
 
-type HistoryStatus = 'approved' | 'pending' | 'closed';
-
-const jobHistoryItems: Array<{
-  id: number;
-  jobId: number;
-  title: Record<string, string>;
-  company: string;
-  district: Record<string, string>;
-  date: string;
-  status: HistoryStatus;
-}> = [
-  { id: 1, jobId: 1, title: { 'zh-HK': '展覽助理', 'zh-CN': '展览助理', en: 'Exhibition Assistant' }, company: 'HKCEC', district: { 'zh-HK': '灣仔', 'zh-CN': '湾仔', en: 'Wan Chai' }, date: '2026-06-12', status: 'approved' },
-  { id: 2, jobId: 4, title: { 'zh-HK': '倉務員', 'zh-CN': '仓务员', en: 'Warehouse Picker' }, company: 'SF Express', district: { 'zh-HK': '荃灣', 'zh-CN': '荃湾', en: 'Tsuen Wan' }, date: '2026-05-28', status: 'closed' },
-  { id: 3, jobId: 2, title: { 'zh-HK': '餐飲服務員', 'zh-CN': '餐饮服务员', en: 'Restaurant Server' }, company: '美食集團', district: { 'zh-HK': '銅鑼灣', 'zh-CN': '铜锣湾', en: 'Causeway Bay' }, date: '2026-05-15', status: 'pending' },
-  { id: 4, jobId: 6, title: { 'zh-HK': '保安員', 'zh-CN': '保安员', en: 'Security Guard' }, company: 'Galaxy Security', district: { 'zh-HK': '將軍澳', 'zh-CN': '将军澳', en: 'Tseung Kwan O' }, date: '2026-05-01', status: 'approved' },
-  { id: 5, jobId: 5, title: { 'zh-HK': '零售店員', 'zh-CN': '零售店员', en: 'Retail Assistant' }, company: 'Uniqlo', district: { 'zh-HK': '觀塘', 'zh-CN': '观塘', en: 'Kwun Tong' }, date: '2026-04-18', status: 'pending' },
-  { id: 6, jobId: 8, title: { 'zh-HK': '派傳單推廣員', 'zh-CN': '派传单推广员', en: 'Promoter' }, company: 'MediaLink', district: { 'zh-HK': '深水埗', 'zh-CN': '深水埗', en: 'Sham Shui Po' }, date: '2026-04-05', status: 'closed' },
-];
 
 const DEGREE_OPTIONS = ['中學', '大專/高職', '大學本科', '碩士', '博士', '其他'];
 const INDUSTRY_OPTIONS = ['飲食餐飲', '零售', '物流倉務', '保安', '展覽活動', '建築裝修', 'IT科技', '金融', '教育', '醫療', '其他'];
@@ -146,13 +134,21 @@ function SettingsRow({ label, value, action, onAction, isDestructive }: {
   );
 }
 
-function StyledInput({ label, value, onChange, type = 'text', placeholder }: {
-  label?: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string;
+function RequiredLabel({ text, optional }: { text: string; optional?: boolean }) {
+  return (
+    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99' }}>
+      {text}{!optional && <span style={{ color: '#D93025', marginLeft: 2 }}>*</span>}
+    </span>
+  );
+}
+
+function StyledInput({ label, value, onChange, type = 'text', placeholder, required }: {
+  label?: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99' }}>{label}</span>}
+      {label && <RequiredLabel text={label} optional={!required} />}
       <input
         type={type}
         value={value}
@@ -174,13 +170,13 @@ function StyledInput({ label, value, onChange, type = 'text', placeholder }: {
   );
 }
 
-function StyledTextarea({ label, value, onChange, placeholder, rows = 3 }: {
-  label?: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
+function StyledTextarea({ label, value, onChange, placeholder, rows = 3, required }: {
+  label?: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number; required?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99' }}>{label}</span>}
+      {label && <RequiredLabel text={label} optional={!required} />}
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -324,7 +320,7 @@ function EditProfileHeader({ onBack, onPreview }: { onBack: () => void; onPrevie
 
 // ── Form section card ──────────────────────────────────
 
-function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -626,12 +622,13 @@ function CertEntryCard({ entry, onChange, onRemove }: {
 // ── Edit Profile View ───────────────────────────────────
 
 function EditProfileView({
-  data, onChange, onBack, onPreview,
+  data, onChange, onBack, onPreview, onSaveComplete,
 }: {
   data: ProfileEditData;
   onChange: (d: ProfileEditData) => void;
   onBack: () => void;
   onPreview: () => void;
+  onSaveComplete?: () => void;
 }) {
   const [saved, setSaved] = useState(false);
   const set = (k: keyof ProfileEditData) => (v: ProfileEditData[keyof ProfileEditData]) => onChange({ ...data, [k]: v });
@@ -673,7 +670,10 @@ function EditProfileView({
 
   function handleSave() {
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => {
+      setSaved(false);
+      onSaveComplete?.();
+    }, 1200);
   }
 
   const initials = data.name.charAt(0).toUpperCase() || '?';
@@ -705,7 +705,7 @@ function EditProfileView({
 
         {/* Personal info */}
         <SectionCard icon={<FileText size={14} style={{ color: '#6B7A99' }} />} title="個人資料">
-          <StyledInput label="姓名" value={data.name} onChange={set('name') as (v: string) => void} placeholder="請輸入姓名" />
+          <StyledInput label="姓名" required value={data.name} onChange={set('name') as (v: string) => void} placeholder="請輸入姓名" />
 
           <div>
             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99', display: 'block', marginBottom: 10 }}>性別（選填）</span>
@@ -725,7 +725,7 @@ function EditProfileView({
         {/* Languages */}
         <SectionCard icon={<Phone size={14} style={{ color: '#6B7A99' }} />} title="語言能力">
           <div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99', display: 'block', marginBottom: 10 }}>常用語言</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99', display: 'block', marginBottom: 10 }}>常用語言<span style={{ color: '#D93025', marginLeft: 2 }}>*</span></span>
             <div className="flex gap-2 flex-wrap">
               {LANG_OPTIONS.map((l) => (
                 <PillToggle key={l} label={l} selected={data.languages.includes(l)} onToggle={() => toggleLang(l)} />
@@ -743,7 +743,7 @@ function EditProfileView({
         </SectionCard>
 
         {/* Bio */}
-        <SectionCard icon={<Award size={14} style={{ color: '#6B7A99' }} />} title="個人優勢介紹">
+        <SectionCard icon={<Award size={14} style={{ color: '#6B7A99' }} />} title={<>個人優勢介紹<span style={{ color: '#D93025', marginLeft: 2 }}>*</span></>}>
           <StyledTextarea
             value={data.bio}
             onChange={set('bio') as (v: string) => void}
@@ -753,7 +753,7 @@ function EditProfileView({
         </SectionCard>
 
         {/* Education */}
-        <SectionCard icon={<GraduationCap size={14} style={{ color: '#6B7A99' }} />} title="教育背景">
+        <SectionCard icon={<GraduationCap size={14} style={{ color: '#6B7A99' }} />} title={<>教育背景<span style={{ color: '#D93025', marginLeft: 2 }}>*</span></>}>
           {data.education.length === 0 && (
             <p style={{ fontSize: '0.82rem', color: '#9CA3AF', textAlign: 'center', margin: '4px 0' }}>尚未添加教育經歷</p>
           )}
@@ -771,7 +771,7 @@ function EditProfileView({
         </SectionCard>
 
         {/* Work experience */}
-        <SectionCard icon={<Briefcase size={14} style={{ color: '#6B7A99' }} />} title="工作經歷">
+        <SectionCard icon={<Briefcase size={14} style={{ color: '#6B7A99' }} />} title={<>工作經歷<span style={{ color: '#D93025', marginLeft: 2 }}>*</span></>}>
           {data.workExperience.length === 0 && (
             <p style={{ fontSize: '0.82rem', color: '#9CA3AF', textAlign: 'center', margin: '4px 0' }}>尚未添加工作經歷</p>
           )}
@@ -1614,182 +1614,6 @@ function PayoutView({ lang, t, onBack }: { lang: Language; t: ReturnType<typeof 
   );
 }
 
-function TempPoolView({ lang, t }: { lang: Language; t: ReturnType<typeof translations[Language]> }) {
-  const [selectedDistricts, setSelectedDistricts] = useState<string[]>(['灣仔', '中西區', '油尖旺']);
-  const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>(['展覽活動', '飲食餐飲', '零售']);
-  const [saved, setSaved] = useState(false);
-  const allDistricts = districts[lang];
-  const allJobTypes = jobCategories[lang];
-  function toggleDistrict(d: string) { setSelectedDistricts((p) => p.includes(d) ? p.filter((x) => x !== d) : [...p, d]); }
-  function toggleJobType(j: string) { setSelectedJobTypes((p) => p.includes(j) ? p.filter((x) => x !== j) : [...p, j]); }
-  return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" style={{ scrollbarWidth: 'none' }}>
-      <div className="rounded-xl p-4" style={{ background: '#FFFBEB', border: '1px solid #F5A62340' }}>
-        <p style={{ fontSize: '0.82rem', color: '#92580A', lineHeight: 1.65, margin: 0 }}>{t.tempPoolRules}</p>
-      </div>
-      <MultiSelectDropdown label={t.districtPref} options={allDistricts} selected={selectedDistricts} onToggle={toggleDistrict} placeholder={t.tempPoolDistrictPlaceholder} />
-      <MultiSelectDropdown label={t.jobTypePref} options={allJobTypes} selected={selectedJobTypes} onToggle={toggleJobType} placeholder={t.tempPoolJobTypePlaceholder} />
-      <div className="flex-1" />
-      {saved ? (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-xl py-3 text-center" style={{ background: '#DCFCE7', color: '#15803D', fontWeight: 700, fontSize: '0.9rem' }}>
-          ✓ {lang === 'en' ? 'Enabled!' : lang === 'zh-CN' ? '已开启！' : '已開啟！'}
-        </motion.div>
-      ) : (
-        <div className="flex gap-3">
-          <button className="flex-1 rounded-xl py-3" style={{ background: '#EEF1F8', color: '#6B7A99', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>{t.pauseBtn}</button>
-          <button onClick={() => setSaved(true)} className="rounded-xl py-3 transition-all active:scale-[0.98]" style={{ flex: 2, background: '#F5A623', color: '#0F1623', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700 }}>{t.saveEnable}</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-type JobFilter = 'approved' | 'pending' | 'closed';
-
-const historyStatusMeta: Record<HistoryStatus, { label: string; bg: string; color: string }> = {
-  approved: { label: '已通過', bg: '#DCFCE7', color: '#15803D' },
-  pending:  { label: '申請中', bg: '#FEF3DC', color: '#D4891A' },
-  closed:   { label: '已關閉', bg: '#EEF1F8', color: '#6B7A99' },
-};
-
-function JobHistoryView({ lang, t, onViewJob }: {
-  lang: Language;
-  t: ReturnType<typeof translations[Language]>;
-  onViewJob?: (jobId: number) => void;
-}) {
-  const [filter, setFilter] = useState<JobFilter | null>(null);
-
-  const tabs: { key: JobFilter; label: string }[] = [
-    { key: 'approved', label: '已通過' },
-    { key: 'pending',  label: '申請中' },
-    { key: 'closed',   label: '已關閉' },
-  ];
-
-  const filtered = filter ? jobHistoryItems.filter((item) => item.status === filter) : jobHistoryItems;
-
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Tabs */}
-      <div className="flex gap-2 px-4 pt-4 pb-2 shrink-0">
-        <button
-          onClick={() => setFilter(null)}
-          className="rounded-xl px-3 py-1.5"
-          style={{
-            background: filter === null ? '#0F1623' : '#FFFFFF',
-            color: filter === null ? '#FFFFFF' : '#6B7A99',
-            border: filter === null ? 'none' : '1.5px solid rgba(15,22,35,0.1)',
-            fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-            boxShadow: filter === null ? '0 2px 8px rgba(15,22,35,0.2)' : CARD_SHADOW,
-          }}
-        >
-          全部
-        </button>
-        {tabs.map((tab) => {
-          const active = filter === tab.key;
-          const meta = historyStatusMeta[tab.key];
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(active ? null : tab.key)}
-              className="rounded-xl px-3 py-1.5"
-              style={{
-                background: active ? '#0F1623' : '#FFFFFF',
-                color: active ? '#FFFFFF' : '#6B7A99',
-                border: active ? 'none' : '1.5px solid rgba(15,22,35,0.1)',
-                fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-                boxShadow: active ? '0 2px 8px rgba(15,22,35,0.2)' : CARD_SHADOW,
-              }}
-            >
-              {tab.label}
-              {!active && (
-                <span style={{ marginLeft: 4, fontSize: '0.68rem', fontWeight: 700, color: meta.color }}>
-                  {jobHistoryItems.filter((i) => i.status === tab.key).length}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-3" style={{ scrollbarWidth: 'none' }}>
-        <p style={{ fontSize: '0.73rem', color: '#9CA3AF', fontWeight: 600 }}>
-          {filtered.length} {t.jobRecordCount}
-        </p>
-        {filtered.length === 0 && (
-          <div className="py-10 flex flex-col items-center gap-2">
-            <p style={{ fontSize: '0.88rem', color: '#9CA3AF' }}>暫無相關記錄</p>
-          </div>
-        )}
-        {filtered.map((item, i) => {
-          const meta = historyStatusMeta[item.status];
-          return (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22, delay: i * 0.05 }}
-              onClick={() => onViewJob?.(item.jobId)}
-              className="rounded-2xl p-4 transition-all active:scale-[0.99]"
-              style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER, cursor: 'pointer' }}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{item.title[lang]}</h3>
-                  <p style={{ fontSize: '0.78rem', color: '#6B7A99', margin: '3px 0 0 0' }}>{item.company} · {item.district[lang]}</p>
-                  <p style={{ fontSize: '0.73rem', color: '#9CA3AF', margin: '3px 0 0 0' }}>{item.date}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="rounded-lg px-2.5 py-1" style={{ background: meta.bg, color: meta.color, fontSize: '0.72rem', fontWeight: 700 }}>
-                    {meta.label}
-                  </span>
-                  <ChevronRight size={14} style={{ color: '#CBD1E1' }} />
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Temp pool rules modal ───────────────────────────────
-function TempPoolRulesModal({ onClose }: { onClose: () => void }) {
-  return (
-    <>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-40" style={{ background: 'rgba(15,22,35,0.45)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.97 }}
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute left-4 right-4 bottom-8 z-50 rounded-2xl p-5 flex flex-col gap-4"
-        style={{ background: '#FFFFFF', boxShadow: '0 16px 48px rgba(15,22,35,0.18)', border: CARD_BORDER }}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: '#F0FDF4' }}>
-              <span style={{ fontSize: '1.1rem' }}>🌱</span>
-            </div>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>臨時候選池規則</h3>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X size={18} style={{ color: '#9CA3AF' }} /></button>
-        </div>
-        <div className="rounded-xl p-4 flex flex-col gap-2.5" style={{ background: '#FFFBEB', border: '1px solid #F5A62340' }}>
-          {[
-            '開啟後，您將被加入臨時候選池，平台可能根據您的個人資料主動向您推薦緊急工作機會。',
-            '臨時候選池的工作通常為即時或短期急聘，可能涵蓋各類工種及地區。',
-            '您可隨時在個人中心關閉此功能，關閉後將不再收到主動推薦。',
-            '加入候選池並不代表受聘，最終仍需經過正常的申請及審核流程。',
-          ].map((rule, i) => (
-            <div key={i} className="flex items-start gap-2.5">
-              <div className="flex items-center justify-center rounded-full shrink-0 mt-0.5" style={{ width: 18, height: 18, background: '#FEF3DC', fontSize: '0.65rem', fontWeight: 700, color: '#D4891A' }}>{i + 1}</div>
-              <p style={{ fontSize: '0.82rem', color: '#92580A', lineHeight: 1.65, margin: 0 }}>{rule}</p>
-            </div>
-          ))}
-        </div>
-        <button onClick={onClose} className="w-full rounded-xl py-2.5" style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, color: '#6B7A99' }}>知道了</button>
-      </motion.div>
-    </>
-  );
-}
 
 // ── Main profile view ──────────────────────────────────
 
@@ -1799,8 +1623,6 @@ function MainProfileView({ lang, user, t, editData, onNavigate, onLogout, onLang
   onLangChange: (l: Language) => void; isVerified?: boolean; onStartVerify?: () => void;
 }) {
   const [showLangMenu, setShowLangMenu] = useState(false);
-  const [tempPoolOn, setTempPoolOn] = useState(false);
-  const [showPoolRules, setShowPoolRules] = useState(false);
   const initials = editData.name.charAt(0).toUpperCase() || user.name.charAt(0).toUpperCase();
   const displayLangs = [...editData.languages.filter((l) => l !== '其他'), ...(editData.languages.includes('其他') && editData.languageOther ? [editData.languageOther] : [])];
   const topEdu = editData.education[0];
@@ -1879,47 +1701,6 @@ function MainProfileView({ lang, user, t, editData, onNavigate, onLogout, onLang
         </button>
       </div>
 
-      {/* Temp pool toggle row */}
-      <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
-        <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 36, height: 36, background: tempPoolOn ? '#F0FDF4' : '#EEF1F8' }}>
-          <span style={{ fontSize: '1rem' }}>🌱</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>臨時候選池</p>
-            <button onClick={() => setShowPoolRules(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center' }}>
-              <AlertCircle size={13} style={{ color: '#9CA3AF' }} />
-            </button>
-          </div>
-          <p style={{ fontSize: '0.75rem', color: tempPoolOn ? '#15803D' : '#9CA3AF', margin: '2px 0 0 0', fontWeight: 500 }}>
-            {tempPoolOn ? '已開啟，平台可主動推薦您工作機會' : '開啟後可接收主動推薦工作'}
-          </p>
-        </div>
-        {/* Toggle switch */}
-        <button
-          onClick={() => setTempPoolOn((p) => !p)}
-          style={{
-            width: 44, height: 26, borderRadius: 13, padding: 3,
-            background: tempPoolOn ? '#15803D' : '#D1D5DB',
-            border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center',
-            justifyContent: tempPoolOn ? 'flex-end' : 'flex-start',
-            transition: 'background 0.25s',
-            flexShrink: 0,
-          }}
-        >
-          <motion.div
-            layout
-            style={{ width: 20, height: 20, borderRadius: '50%', background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-          />
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {showPoolRules && <TempPoolRulesModal onClose={() => setShowPoolRules(false)} />}
-      </AnimatePresence>
-
       {/* Settings quick link */}
       <button onClick={() => onNavigate('settings')} className="rounded-2xl p-4 flex items-center justify-between transition-all active:scale-[0.99]" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER, cursor: 'pointer' }}>
         <div className="flex items-center gap-3">
@@ -1991,7 +1772,7 @@ function MainProfileView({ lang, user, t, editData, onNavigate, onLogout, onLang
 
 // ── ProfilePage orchestrator ───────────────────────────
 
-function initEditData(user: UserData): ProfileEditData {
+export function initEditData(user: UserData): ProfileEditData {
   return {
     name: user.name,
     gender: user.gender || '',
@@ -2005,21 +1786,31 @@ function initEditData(user: UserData): ProfileEditData {
   };
 }
 
-export function ProfilePage({ lang, onLangChange, user, onLogout, isVerified, onStartVerify, onViewJob }: ProfilePageProps & { onViewJob?: (jobId: number) => void }) {
+export function ProfilePage({
+  lang, onLangChange, user, onLogout, isVerified, onStartVerify,
+  editData, onEditDataChange,
+  forceEditProfile, onForceConsumed, onEditSaved,
+  onViewJob,
+}: ProfilePageProps & { onViewJob?: (jobId: number) => void }) {
   const t = translations[lang];
   const [stack, setStack] = useState<ProfileView[]>(['main']);
-  const [editData, setEditData] = useState<ProfileEditData>(() => initEditData(user));
 
   const current = stack[stack.length - 1];
   const push = (v: ProfileView) => setStack((s) => [...s, v]);
   const pop = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
+
+  useEffect(() => {
+    if (forceEditProfile) {
+      setStack(['main', 'edit-profile']);
+      onForceConsumed?.();
+    }
+  }, [forceEditProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const titles: Record<ProfileView, string> = {
     main: t.personalCenter,
     settings: t.accountSettings,
     wallet: t.myWallet,
     payout: t.payoutTitle,
-    'temp-pool': t.tempPoolTitle,
     'job-history': t.jobHistoryTitle,
     'edit-profile': '編輯個人資料',
     'resume-preview': '簡歷預覽',
@@ -2060,18 +1851,16 @@ export function ProfilePage({ lang, onLangChange, user, onLogout, isVerified, on
           {current === 'payout' && (
             <PayoutView lang={lang} t={t} onBack={pop} />
           )}
-          {current === 'temp-pool' && (
-            <TempPoolView lang={lang} t={t} />
-          )}
           {current === 'job-history' && (
-            <JobHistoryView lang={lang} t={t} onViewJob={onViewJob} />
+            <JobHistoryView lang={lang} onViewJob={onViewJob} />
           )}
           {current === 'edit-profile' && (
             <EditProfileView
               data={editData}
-              onChange={setEditData}
+              onChange={onEditDataChange}
               onBack={pop}
               onPreview={() => push('resume-preview')}
+              onSaveComplete={() => { pop(); onEditSaved?.(); }}
             />
           )}
           {current === 'resume-preview' && (

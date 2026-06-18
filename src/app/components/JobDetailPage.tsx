@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ChevronLeft, Share2, MapPin, Users, FileText, Award, Building2, CheckCircle2, Clock, Check, Shield, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Share2, MapPin, FileText, Award, Building2, CheckCircle2, Clock, Check, Shield, AlertCircle, GraduationCap, Briefcase, X as XIcon, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Language, translations } from './i18n';
 import { Job, formatTime } from './jobData';
+import { ProfileEditData } from './ProfilePage';
 
-type ApplyStatus = 'idle' | 'applied' | 'reviewing' | 'scheduled' | 'rejected';
+type ApplyStatus = 'idle' | 'standby' | 'applied' | 'reviewing' | 'scheduled' | 'rejected';
 
 const CARD_SHADOW = '0 1px 3px rgba(15,22,35,0.06), 0 4px 16px rgba(15,22,35,0.04)';
 const CARD_BORDER = '1px solid rgba(15,22,35,0.06)';
@@ -16,6 +17,8 @@ interface JobDetailPageProps {
   onBack: () => void;
   onStartVerify: () => void;
   readOnly?: boolean;
+  editData?: ProfileEditData;
+  onNeedEditProfile?: () => void;
 }
 
 function InfoRow({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
@@ -45,23 +48,26 @@ function SectionCard({ title, children }: { title: string; children: React.React
 }
 
 const applyStatusConfig: Record<ApplyStatus, { label: string; bg: string; color: string; desc: string }> = {
-  idle: { label: '', bg: '', color: '', desc: '' },
-  applied: { label: '已申請', bg: '#FEF3DC', color: '#D4891A', desc: '申請已提交，等待審核' },
+  idle:      { label: '', bg: '', color: '', desc: '' },
+  standby:   { label: '候選中', bg: '#EEF1FF', color: '#3B5BDB', desc: '已加入候補名單，如有空缺將優先通知您' },
+  applied:   { label: '已申請', bg: '#FEF3DC', color: '#D4891A', desc: '申請已提交，等待審核' },
   reviewing: { label: '審核中', bg: '#EEF1F8', color: '#3B5BDB', desc: '人事部正在審核您的申請' },
   scheduled: { label: '已安排', bg: '#DCFCE7', color: '#15803D', desc: '恭喜！您的申請已通過，詳情請留意通知' },
-  rejected: { label: '未獲取錄', bg: '#FEE2E2', color: '#D93025', desc: '很遺憾此次未獲取錄，可繼續申請其他職位' },
+  rejected:  { label: '未獲取錄', bg: '#FEE2E2', color: '#D93025', desc: '很遺憾此次未獲取錄，可繼續申請其他職位' },
 };
 
-export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, readOnly = false }: JobDetailPageProps) {
+export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, readOnly = false, editData, onNeedEditProfile }: JobDetailPageProps) {
   const t = translations[lang];
   const [applyStatus, setApplyStatus] = useState<ApplyStatus>('idle');
   const [showCopied, setShowCopied] = useState(false);
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [showVerifyPrompt, setShowVerifyPrompt] = useState(false);
+  const [showResumePreview, setShowResumePreview] = useState(false);
+  const [showStandbyRules, setShowStandbyRules] = useState(false);
 
   const salaryStr = job.salaryMax
-    ? `HK$${job.salary}–${job.salaryMax}${t[job.salaryPeriod === 'hourly' ? 'hourlyUnit' : job.salaryPeriod === 'daily' ? 'dailyUnit' : 'monthlyUnit']}`
-    : `HK$${job.salary.toLocaleString()}${t[job.salaryPeriod === 'hourly' ? 'hourlyUnit' : job.salaryPeriod === 'daily' ? 'dailyUnit' : 'monthlyUnit']}`;
+    ? `HK$${job.salary}–${job.salaryMax}${t[job.salaryPeriod === 'hourly' ? 'hourlyUnit' : 'monthlyUnit']}`
+    : `HK$${job.salary.toLocaleString()}${t[job.salaryPeriod === 'hourly' ? 'hourlyUnit' : 'monthlyUnit']}`;
 
   const jobTypeLabel = job.jobType === 'full-time' ? t.fullTimeTag : job.jobType === 'part-time' ? t.partTimeTag : t.casualTag;
 
@@ -83,14 +89,31 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
       setShowVerifyPrompt(true);
       return;
     }
+    if (job.remainingSpots === 0) {
+      setShowStandbyRules(true);
+      return;
+    }
+    setShowResumePreview(true);
+  }
+
+  function handleStandbyConfirmed() {
+    setShowStandbyRules(false);
+    setShowResumePreview(true);
+  }
+
+  function handleResumeConfirmed() {
+    setShowResumePreview(false);
     setShowApplyConfirm(true);
   }
 
   function confirmApply() {
     setShowApplyConfirm(false);
-    setApplyStatus('applied');
-    // Simulate progression to "reviewing" after 1.5s
-    setTimeout(() => setApplyStatus('reviewing'), 1500);
+    if (job.remainingSpots === 0) {
+      setApplyStatus('standby');
+    } else {
+      setApplyStatus('applied');
+      setTimeout(() => setApplyStatus('reviewing'), 1500);
+    }
   }
 
   const statusCfg = applyStatus !== 'idle' ? applyStatusConfig[applyStatus] : null;
@@ -152,13 +175,8 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
             <span className="rounded-md px-2 py-0.5" style={{ fontSize: '0.7rem', fontWeight: 700, background: '#EEF1F8', color: '#1A2B4A', border: '1px solid rgba(15,22,35,0.08)' }}>
               {jobTypeLabel}
             </span>
-            {job.isDailyPay && (
-              <span className="rounded-md px-2 py-0.5" style={{ fontSize: '0.7rem', fontWeight: 700, background: '#DCFCE7', color: '#15803D', border: '1px solid rgba(21,128,61,0.18)' }}>
-                {t.dailyPayTag}
-              </span>
-            )}
-            <span className="rounded-md px-2 py-0.5" style={{ fontSize: '0.7rem', fontWeight: 600, background: '#EEF1F8', color: '#6B7A99', border: '1px solid rgba(15,22,35,0.08)' }}>
-              {job.category[lang]}
+            <span className="rounded-md px-2 py-0.5" style={{ fontSize: '0.7rem', fontWeight: 600, background: '#F0F4FF', color: '#3B5BDB', border: '1px solid rgba(59,91,219,0.15)' }}>
+              {job.workCategory}
             </span>
           </div>
 
@@ -188,12 +206,6 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
               <div className="text-right">
                 <p style={{ fontSize: '0.68rem', fontWeight: 600, color: '#9CA3AF', margin: '0 0 2px 0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>招募</p>
                 <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623' }}>{job.headcount}人</span>
-              </div>
-              <div className="text-right">
-                <p style={{ fontSize: '0.68rem', fontWeight: 600, color: '#9CA3AF', margin: '0 0 2px 0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>餘額</p>
-                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: job.remainingSpots <= 2 ? '#D93025' : '#15803D' }}>
-                  {job.remainingSpots}人
-                </span>
               </div>
             </div>
           </div>
@@ -292,6 +304,28 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
             value={job.address[lang]}
             sub={`${job.district[lang]} · ${job.mtr[lang]}`}
           />
+          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
+          {/* Store photos */}
+          <div>
+            <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9CA3AF', margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>門店照片</p>
+            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              {[
+                { bg: 'linear-gradient(135deg, #E8F4FD 0%, #C9E8F8 100%)', label: '門口' },
+                { bg: 'linear-gradient(135deg, #F0F4FF 0%, #D8E3FF 100%)', label: '內部' },
+                { bg: 'linear-gradient(135deg, #FEF9EC 0%, #FDE9B4 100%)', label: '環境' },
+              ].map(({ bg, label }) => (
+                <div
+                  key={label}
+                  className="shrink-0 flex flex-col items-center justify-center rounded-xl gap-1"
+                  style={{ width: 96, height: 72, background: bg, border: '1px solid rgba(15,22,35,0.07)' }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>🏪</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#9CA3AF' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
           {/* Map module */}
           <button
             onClick={handleMapPress}
@@ -371,34 +405,291 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
             <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#9CA3AF' }}>僅供查閱，無法操作</span>
           </div>
         )}
-        {!readOnly && (applyStatus === 'idle' ? (
-          <button
-            onClick={handleApply}
-            className="flex-1 rounded-xl py-3.5 transition-all active:scale-[0.98]"
-            style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 700, color: '#0F1623' }}
-          >
-            立即申請
-          </button>
-        ) : (
-          <div
-            className="flex-1 rounded-xl py-3.5 flex items-center justify-center gap-2"
-            style={{ background: applyStatusConfig[applyStatus].bg, border: `1.5px solid ${applyStatusConfig[applyStatus].color}30` }}
-          >
-            {applyStatus === 'reviewing' && (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
+        {!readOnly && (() => {
+          const isFull = job.remainingSpots === 0;
+
+          if (applyStatus === 'idle' && isFull) {
+            return (
+              <>
+                <button
+                  onClick={handleApply}
+                  className="flex-1 rounded-xl py-3.5 transition-all active:scale-[0.98]"
+                  style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, color: '#0F1623' }}
+                >
+                  申請候補
+                </button>
+                <div
+                  className="flex-1 rounded-xl py-3.5 flex items-center justify-center"
+                  style={{ background: '#EEF1F8', border: 'none', cursor: 'not-allowed' }}
+                >
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#9CA3AF' }}>崗位已滿</span>
+                </div>
+              </>
+            );
+          }
+
+          if (applyStatus === 'idle') {
+            return (
+              <button
+                onClick={handleApply}
+                className="flex-1 rounded-xl py-3.5 transition-all active:scale-[0.98]"
+                style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 700, color: '#0F1623' }}
               >
-                <Clock size={16} style={{ color: applyStatusConfig[applyStatus].color }} />
-              </motion.div>
-            )}
-            {applyStatus === 'scheduled' && <CheckCircle2 size={16} style={{ color: '#15803D' }} />}
-            <span style={{ fontSize: '0.92rem', fontWeight: 700, color: applyStatusConfig[applyStatus].color }}>
-              {applyStatusConfig[applyStatus].label}
-            </span>
-          </div>
-        ))}
+                立即申請
+              </button>
+            );
+          }
+
+          return (
+            <div
+              className="flex-1 rounded-xl py-3.5 flex items-center justify-center gap-2"
+              style={{ background: applyStatusConfig[applyStatus].bg, border: `1.5px solid ${applyStatusConfig[applyStatus].color}30` }}
+            >
+              {applyStatus === 'reviewing' && (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
+                >
+                  <Clock size={16} style={{ color: applyStatusConfig[applyStatus].color }} />
+                </motion.div>
+              )}
+              {applyStatus === 'scheduled' && <CheckCircle2 size={16} style={{ color: '#15803D' }} />}
+              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: applyStatusConfig[applyStatus].color }}>
+                {applyStatusConfig[applyStatus].label}
+              </span>
+            </div>
+          );
+        })()}
       </div>
+
+      {/* Resume preview sheet — shown before apply confirm when verified */}
+      <AnimatePresence>
+        {showResumePreview && editData && (() => {
+          const initials = (editData.name || '?').charAt(0).toUpperCase();
+          const displayLangs = [...editData.languages.filter((l) => l !== '其他'), ...(editData.languages.includes('其他') && editData.languageOther ? [editData.languageOther] : [])];
+          const isIncomplete = !editData.name || editData.languages.length === 0 || !editData.bio || editData.workExperience.length === 0 || editData.education.length === 0;
+          const missingFields = [
+            !editData.name && '姓名',
+            editData.languages.length === 0 && '語言能力',
+            !editData.bio && '個人優勢介紹',
+            editData.education.length === 0 && '教育背景',
+            editData.workExperience.length === 0 && '工作經歷',
+          ].filter(Boolean) as string[];
+
+          return (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 z-40"
+                style={{ background: 'rgba(15,22,35,0.45)', backdropFilter: 'blur(2px)' }}
+                onClick={() => setShowResumePreview(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute left-0 right-0 bottom-0 z-50 rounded-t-2xl px-5 py-6 flex flex-col gap-4"
+                style={{ background: '#FFFFFF', boxShadow: '0 -8px 40px rgba(15,22,35,0.15)' }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>確認當前簡歷</p>
+                  <button onClick={() => setShowResumePreview(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                    <XIcon size={18} style={{ color: '#9CA3AF' }} />
+                  </button>
+                </div>
+
+                {/* Resume card */}
+                <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: '#F7F8FC', border: '1px solid rgba(15,22,35,0.07)' }}>
+                  {/* Avatar + name */}
+                  <div className="flex items-center gap-3">
+                    <div className="shrink-0 flex items-center justify-center rounded-2xl" style={{ width: 44, height: 44, background: '#FEF3DC', border: '2px solid rgba(245,166,35,0.3)' }}>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#D4891A' }}>{initials}</span>
+                    </div>
+                    <div className="flex-1">
+                      <p style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{editData.name || '（未填姓名）'}</p>
+                      {(editData.gender || editData.birthday) && (
+                        <p style={{ fontSize: '0.75rem', color: '#6B7A99', margin: '2px 0 0 0' }}>
+                          {[editData.gender, editData.birthday].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className="rounded-lg px-2.5 py-1 shrink-0"
+                      style={{
+                        background: isIncomplete ? '#FEF3DC' : '#DCFCE7',
+                        color: isIncomplete ? '#D4891A' : '#15803D',
+                        fontSize: '0.7rem', fontWeight: 700,
+                      }}
+                    >
+                      {isIncomplete ? '資料未完善' : '資料完整'}
+                    </span>
+                  </div>
+
+                  <div style={{ height: 1, background: 'rgba(15,22,35,0.06)' }} />
+
+                  {/* Info rows */}
+                  <div className="flex flex-col gap-2">
+                    {/* Languages */}
+                    {displayLangs.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center rounded-lg shrink-0" style={{ width: 22, height: 22, background: '#EEF1F8' }}>
+                          <Award size={11} style={{ color: '#6B7A99' }} />
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: '#374151' }}>{displayLangs.join(' · ')}</span>
+                      </div>
+                    )}
+                    {/* Work experience */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center rounded-lg shrink-0" style={{ width: 22, height: 22, background: '#EEF1F8' }}>
+                        <Briefcase size={11} style={{ color: '#6B7A99' }} />
+                      </div>
+                      <span style={{ fontSize: '0.78rem', color: editData.workExperience.length === 0 ? '#C4C9D6' : '#374151' }}>
+                        {editData.workExperience.length === 0 ? '尚未填寫工作經歷' : `${editData.workExperience.length} 項工作經歷`}
+                      </span>
+                    </div>
+                    {/* Education */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center rounded-lg shrink-0" style={{ width: 22, height: 22, background: '#EEF1F8' }}>
+                        <GraduationCap size={11} style={{ color: '#6B7A99' }} />
+                      </div>
+                      <span style={{ fontSize: '0.78rem', color: editData.education.length === 0 ? '#C4C9D6' : '#374151' }}>
+                        {editData.education.length === 0 ? '尚未填寫教育背景' : editData.education[0]?.school || '已填寫教育背景'}
+                      </span>
+                    </div>
+                    {/* Bio */}
+                    <div className="flex items-start gap-2">
+                      <div className="flex items-center justify-center rounded-lg shrink-0 mt-0.5" style={{ width: 22, height: 22, background: '#EEF1F8' }}>
+                        <FileText size={11} style={{ color: '#6B7A99' }} />
+                      </div>
+                      <span style={{ fontSize: '0.78rem', color: !editData.bio ? '#C4C9D6' : '#374151', lineHeight: 1.5 }}>
+                        {!editData.bio ? '尚未填寫個人優勢' : editData.bio.length > 50 ? editData.bio.slice(0, 50) + '…' : editData.bio}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Incomplete warning */}
+                {isIncomplete && (
+                  <div className="rounded-xl px-4 py-3 flex flex-col gap-2" style={{ background: '#FEE2E2', border: '1px solid rgba(217,48,37,0.2)' }}>
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={14} style={{ color: '#D93025', flexShrink: 0, marginTop: 1 }} />
+                      <p style={{ fontSize: '0.78rem', color: '#991B1B', lineHeight: 1.65, margin: 0 }}>
+                        必填資料未完善，請先補充以下資料才可投遞：
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pl-5">
+                      {missingFields.map((f) => (
+                        <span key={f} className="rounded-md px-2 py-0.5" style={{ fontSize: '0.72rem', fontWeight: 700, background: '#FEE2E2', color: '#D93025', border: '1px solid rgba(217,48,37,0.25)' }}>{f}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-3">
+                  {isIncomplete ? (
+                    <button
+                      onClick={() => { setShowResumePreview(false); onNeedEditProfile?.(); }}
+                      className="flex-1 rounded-xl py-3 transition-all active:scale-[0.98]"
+                      style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: '#0F1623' }}
+                    >
+                      前往完善必填資料
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { setShowResumePreview(false); onNeedEditProfile?.(); }}
+                        className="rounded-xl py-3 px-4"
+                        style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#6B7A99', whiteSpace: 'nowrap' }}
+                      >
+                        修改資料
+                      </button>
+                      <button
+                        onClick={handleResumeConfirmed}
+                        className="flex-1 rounded-xl py-3 transition-all active:scale-[0.98]"
+                        style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: '#0F1623' }}
+                      >
+                        確認以此簡歷投遞
+                      </button>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            </>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Standby rules sheet — shown before confirming waitlist when job is full */}
+      <AnimatePresence>
+        {showStandbyRules && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-40"
+              style={{ background: 'rgba(15,22,35,0.45)', backdropFilter: 'blur(2px)' }}
+              onClick={() => setShowStandbyRules(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute left-0 right-0 bottom-0 z-50 rounded-t-2xl px-5 py-6 flex flex-col gap-4"
+              style={{ background: '#FFFFFF', boxShadow: '0 -8px 40px rgba(15,22,35,0.15)' }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center rounded-2xl shrink-0" style={{ width: 44, height: 44, background: '#FEF3DC' }}>
+                    <Clock size={20} style={{ color: '#F5A623' }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>候補申請說明</p>
+                    <p style={{ fontSize: '0.75rem', color: '#9CA3AF', margin: '2px 0 0 0' }}>此職位名額已滿，可申請候補</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowStandbyRules(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                  <XIcon size={18} style={{ color: '#9CA3AF' }} />
+                </button>
+              </div>
+
+              {/* Rules card */}
+              <div className="rounded-xl flex flex-col gap-3 p-4" style={{ background: '#F7F8FC', border: '1px solid rgba(15,22,35,0.07)' }}>
+                {[
+                  { icon: '📋', title: '候補名單排隊', desc: '按申請先後順序進入候補名單，名額空缺時優先聯繫排前的候補者。' },
+                  { icon: '🔔', title: '有空缺即通知', desc: '一旦有原申請者退出或新增名額，NewBee 將第一時間以通知聯繫您。' },
+                  { icon: '⏳', title: '候補期限', desc: '候補資格保留至活動結束前 24 小時，逾時自動失效。' },
+                  { icon: '✏️', title: '可隨時撤回', desc: '未獲確認前，您可在「我的申請」中隨時取消候補。' },
+                ].map(({ icon, title, desc }) => (
+                  <div key={title} className="flex items-start gap-3">
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                    <div>
+                      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{title}</p>
+                      <p style={{ fontSize: '0.75rem', color: '#6B7A99', margin: '3px 0 0 0', lineHeight: 1.55 }}>{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowStandbyRules(false)}
+                  className="flex-1 rounded-xl py-3"
+                  style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#6B7A99' }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleStandbyConfirmed}
+                  className="rounded-xl py-3 transition-all active:scale-[0.98]"
+                  style={{ flex: 2, background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: '#0F1623' }}
+                >
+                  了解，繼續申請候補
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Verify prompt sheet — shown when unverified user tries to apply */}
       <AnimatePresence>
@@ -495,7 +786,9 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
                   <span style={{ fontSize: '1.1rem', fontWeight: 800, color: job.logoColor }}>{job.logo}</span>
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>確認申請此職位？</p>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>
+                    {job.remainingSpots === 0 ? '確認申請候補？' : '確認申請此職位？'}
+                  </p>
                   <p style={{ fontSize: '0.78rem', color: '#6B7A99', margin: '3px 0 0 0' }}>{job.title[lang]} · {job.company}</p>
                 </div>
               </div>
@@ -513,7 +806,11 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
                   <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0F1623' }}>{job.date[lang]}</span>
                 </div>
               </div>
-              <p style={{ fontSize: '0.78rem', color: '#9CA3AF', textAlign: 'center', margin: 0 }}>申請後平台將審核您的資料，結果將透過通知告知</p>
+              <p style={{ fontSize: '0.78rem', color: '#9CA3AF', textAlign: 'center', margin: 0 }}>
+                {job.remainingSpots === 0
+                  ? '候補申請提交後，如有空缺將優先聯繫您'
+                  : '申請後平台將審核您的資料，結果將透過通知告知'}
+              </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowApplyConfirm(false)}
@@ -527,7 +824,7 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
                   className="rounded-xl py-3 transition-all active:scale-[0.98]"
                   style={{ flex: 2, background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: '#0F1623' }}
                 >
-                  確認申請
+                  {job.remainingSpots === 0 ? '確認候補' : '確認申請'}
                 </button>
               </div>
             </motion.div>
