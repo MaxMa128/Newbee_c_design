@@ -1,18 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { Briefcase, FileText, MessageSquare, User, Map, ChevronRight, X, Minimize2, LogOut as ExitIcon } from 'lucide-react';
+import { Briefcase, FileText, MessageSquare, User, Map, ChevronRight, X, Minimize2, LogOut as ExitIcon, ClipboardCheck, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { WelcomePage } from './components/WelcomePage';
 import { AuthPage } from './components/AuthPage';
 import { HomePage } from './components/HomePage';
 import { ProfilePage, ProfileEditData, initEditData } from './components/ProfilePage';
 import { ComingSoon } from './components/ComingSoon';
+import { MessagesPage, NavTarget } from './components/MessagesPage';
 import { JobHistoryPage } from './components/JobHistoryPage';
 import { JobDetailPage } from './components/JobDetailPage';
+import { EmployedWorkPage } from './components/EmployedWorkPage';
+import { ShiftPage } from './components/ShiftPage';
 import { HKIDVerifyFlow } from './components/HKIDVerifyFlow';
 import { Language, translations } from './components/i18n';
 import { jobs } from './components/jobData';
 
 type Screen = 'welcome' | 'auth' | 'main';
+type AppMode = 'seeking' | 'employed';
 
 interface UserData {
   name: string;
@@ -184,6 +188,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('welcome');
   const [lang, setLang] = useState<Language>('zh-HK');
   const [activeNav, setActiveNav] = useState(0);
+  const [appMode, setAppMode] = useState<AppMode>('seeking');
   const [user, setUser] = useState<UserData | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [readOnlyJob, setReadOnlyJob] = useState(false);
@@ -194,6 +199,7 @@ export default function App() {
   }));
   const [forceEditProfile, setForceEditProfile] = useState(false);
   const [pendingJobAfterEdit, setPendingJobAfterEdit] = useState<number | null>(null);
+  const [forceWalletTxId, setForceWalletTxId] = useState<number | null>(null);
 
   const t = translations[lang];
 
@@ -205,6 +211,17 @@ export default function App() {
   function handleLogout() {
     setUser(null);
     setScreen('welcome');
+    setActiveNav(0);
+    setAppMode('seeking');
+  }
+
+  function handleSwitchToEmployed() {
+    setAppMode('employed');
+    setActiveNav(0);
+  }
+
+  function handleSwitchToSeeking() {
+    setAppMode('seeking');
     setActiveNav(0);
   }
 
@@ -228,12 +245,44 @@ export default function App() {
     }
   }
 
-  const navItems = [
+  function handleMessageNavigation(target: NavTarget) {
+    switch (target.type) {
+      case 'jobs':
+        setAppMode('seeking'); setActiveNav(0); setSelectedJobId(null); break;
+      case 'job-history':
+        setAppMode('seeking'); setActiveNav(1); setSelectedJobId(null); break;
+      case 'verify':
+        setShowVerifyFlow(true); break;
+      case 'shift':
+        setAppMode('employed'); setActiveNav(1); break;
+      case 'attendance':
+        setAppMode('employed'); setActiveNav(0); break;
+      case 'wallet':
+        setAppMode('seeking'); setActiveNav(3); break;
+      case 'wallet-detail':
+        setAppMode('seeking'); setActiveNav(3); setForceWalletTxId(target.txId); break;
+      case 'job-detail':
+        setAppMode('seeking'); setSelectedJobId(target.jobId); setReadOnlyJob(true); break;
+    }
+  }
+
+  const seekingNavItems = [
     { icon: Briefcase, label: t.findJobs },
     { icon: FileText, label: t.jobHistory },
     { icon: MessageSquare, label: t.messages },
     { icon: User, label: t.profile },
   ];
+  const employedNavItems = [
+    { icon: ClipboardCheck, label: '考勤打卡' },
+    { icon: CalendarDays, label: '我的排班' },
+    { icon: MessageSquare, label: t.messages },
+    { icon: User, label: t.profile },
+  ];
+  const navItems = appMode === 'employed' ? employedNavItems : seekingNavItems;
+  // Accent colour: yellow for employed, blue for seeking
+  // employed = blue, seeking = yellow
+  const navAccent = appMode === 'employed' ? '#3B5BDB' : '#F5A623';
+  const navActiveBg = appMode === 'employed' ? '#EEF8FF' : '#FEF3DC';
 
   const currentUser: UserData = user ?? {
     name: lang === 'en' ? 'Alex Chan' : '陳大文',
@@ -242,17 +291,22 @@ export default function App() {
     age: 26,
   };
 
-  const navKey = `${screen}|${activeNav}|${selectedJobId ?? ''}|${showVerifyFlow}`;
+  const navKey = `${screen}|${activeNav}|${selectedJobId ?? ''}|${showVerifyFlow}|${appMode}`;
 
   const devActions: DevNavAction[] = [
     // Base screens
     { group: '基礎頁面', label: '歡迎頁', action: () => { setScreen('welcome'); setSelectedJobId(null); setShowVerifyFlow(false); } },
     { group: '基礎頁面', label: '登入 / 註冊', action: () => { setScreen('auth'); setSelectedJobId(null); setShowVerifyFlow(false); } },
-    // Main tabs
-    { group: '主應用', label: '首頁職位', action: () => { setScreen('main'); setActiveNav(0); setSelectedJobId(null); setShowVerifyFlow(false); } },
-    { group: '主應用', label: '求職記錄', action: () => { setScreen('main'); setActiveNav(1); setSelectedJobId(null); setShowVerifyFlow(false); } },
-    { group: '主應用', label: '消息', action: () => { setScreen('main'); setActiveNav(2); setSelectedJobId(null); setShowVerifyFlow(false); } },
-    { group: '主應用', label: '個人中心', action: () => { setScreen('main'); setActiveNav(3); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    // Main tabs — seeking
+    { group: '求職模式', label: '首頁職位', action: () => { setScreen('main'); setAppMode('seeking'); setActiveNav(0); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '求職模式', label: '求職記錄', action: () => { setScreen('main'); setAppMode('seeking'); setActiveNav(1); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '求職模式', label: '消息', action: () => { setScreen('main'); setAppMode('seeking'); setActiveNav(2); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '求職模式', label: '個人中心', action: () => { setScreen('main'); setAppMode('seeking'); setActiveNav(3); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    // Main tabs — employed
+    { group: '在職模式', label: '考勤打卡', action: () => { setScreen('main'); setAppMode('employed'); setActiveNav(0); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '在職模式', label: '我的排班', action: () => { setScreen('main'); setAppMode('employed'); setActiveNav(1); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '在職模式', label: '消息（在職）', action: () => { setScreen('main'); setAppMode('employed'); setActiveNav(2); setSelectedJobId(null); setShowVerifyFlow(false); } },
+    { group: '在職模式', label: '個人中心（在職）', action: () => { setScreen('main'); setAppMode('employed'); setActiveNav(3); setSelectedJobId(null); setShowVerifyFlow(false); } },
     // Job detail
     ...jobs.slice(0, 4).map((j) => ({
       group: '職位詳情',
@@ -326,26 +380,26 @@ export default function App() {
               {/* Tab content */}
               <div className="flex-1 overflow-hidden relative">
                 <AnimatePresence mode="wait">
-                  {activeNav === 0 && (
+                  {appMode === 'seeking' && activeNav === 0 && (
                     <motion.div key="jobs" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
                       <HomePage lang={lang} onJobPress={(id) => { setSelectedJobId(id); setReadOnlyJob(false); }} />
                     </motion.div>
                   )}
-                  {activeNav === 1 && (
+                  {appMode === 'seeking' && activeNav === 1 && (
                     <motion.div key="job-history" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
                       <JobHistoryPage lang={lang} onViewJob={(id) => { setSelectedJobId(id); setReadOnlyJob(true); }} />
                     </motion.div>
                   )}
-                  {activeNav === 2 && (
-                    <motion.div key="messages" className="absolute inset-0"
+                  {appMode === 'seeking' && activeNav === 2 && (
+                    <motion.div key="messages-seeking" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <ComingSoon lang={lang} tab="messages" />
+                      <MessagesPage onNavigate={handleMessageNavigation} />
                     </motion.div>
                   )}
-                  {activeNav === 3 && (
-                    <motion.div key="profile" className="absolute inset-0"
+                  {appMode === 'seeking' && activeNav === 3 && (
+                    <motion.div key="profile-seeking" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
                       <ProfilePage
                         lang={lang}
@@ -359,6 +413,47 @@ export default function App() {
                         onEditDataChange={setEditData}
                         forceEditProfile={forceEditProfile}
                         onForceConsumed={() => setForceEditProfile(false)}
+                        forceWalletTxId={forceWalletTxId}
+                        onForceWalletConsumed={() => setForceWalletTxId(null)}
+                        onEditSaved={handleEditSaved}
+                      />
+                    </motion.div>
+                  )}
+                  {appMode === 'employed' && activeNav === 0 && (
+                    <motion.div key="employed-work" className="absolute inset-0"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+                      <EmployedWorkPage />
+                    </motion.div>
+                  )}
+                  {appMode === 'employed' && activeNav === 1 && (
+                    <motion.div key="employed-shift" className="absolute inset-0"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+                      <ShiftPage />
+                    </motion.div>
+                  )}
+                  {appMode === 'employed' && activeNav === 2 && (
+                    <motion.div key="messages-employed" className="absolute inset-0"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+                      <MessagesPage onNavigate={handleMessageNavigation} />
+                    </motion.div>
+                  )}
+                  {appMode === 'employed' && activeNav === 3 && (
+                    <motion.div key="profile-employed" className="absolute inset-0"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+                      <ProfilePage
+                        lang={lang}
+                        onLangChange={setLang}
+                        user={currentUser}
+                        onLogout={() => { handleLogout(); handleSwitchToSeeking(); }}
+                        isVerified={isVerified}
+                        onStartVerify={() => setShowVerifyFlow(true)}
+                        onViewJob={(id) => { setSelectedJobId(id); setReadOnlyJob(true); }}
+                        editData={editData}
+                        onEditDataChange={setEditData}
+                        forceEditProfile={forceEditProfile}
+                        onForceConsumed={() => setForceEditProfile(false)}
+                        forceWalletTxId={forceWalletTxId}
+                        onForceWalletConsumed={() => setForceWalletTxId(null)}
                         onEditSaved={handleEditSaved}
                       />
                     </motion.div>
@@ -414,6 +509,39 @@ export default function App() {
                 )}
               </AnimatePresence>
 
+              {/* Floating mode switch — hidden on Messages (2) and Profile (3) tabs */}
+              {activeNav < 2 && <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 120, pointerEvents: 'auto' }}>
+                <div
+                  className="flex rounded-full p-0.5"
+                  style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', boxShadow: '0 2px 12px rgba(15,22,35,0.14)', border: '1px solid rgba(15,22,35,0.08)' }}
+                >
+                  <button
+                    onClick={handleSwitchToEmployed}
+                    className="rounded-full px-3 py-1 transition-all"
+                    style={{
+                      background: appMode === 'employed' ? '#3B5BDB' : 'transparent',
+                      border: 'none', cursor: 'pointer',
+                      fontSize: '0.72rem', fontWeight: 700,
+                      color: appMode === 'employed' ? '#FFFFFF' : '#9CA3AF',
+                    }}
+                  >
+                    在職
+                  </button>
+                  <button
+                    onClick={handleSwitchToSeeking}
+                    className="rounded-full px-3 py-1 transition-all"
+                    style={{
+                      background: appMode === 'seeking' ? '#F5A623' : 'transparent',
+                      border: 'none', cursor: 'pointer',
+                      fontSize: '0.72rem', fontWeight: 700,
+                      color: appMode === 'seeking' ? '#0F1623' : '#9CA3AF',
+                    }}
+                  >
+                    求職
+                  </button>
+                </div>
+              </div>}
+
               {/* Bottom nav */}
               <div
                 className="shrink-0 flex items-center justify-around px-2 py-2"
@@ -431,11 +559,11 @@ export default function App() {
                     >
                       <div
                         className="flex items-center justify-center rounded-xl transition-all"
-                        style={{ width: 40, height: 28, background: isActive ? '#FEF3DC' : 'transparent' }}
+                        style={{ width: 40, height: 28, background: isActive ? navActiveBg : 'transparent' }}
                       >
-                        <Icon size={19} style={{ color: isActive ? '#F5A623' : '#9CA3AF', strokeWidth: isActive ? 2.5 : 1.8 }} />
+                        <Icon size={19} style={{ color: isActive ? navAccent : '#9CA3AF', strokeWidth: isActive ? 2.5 : 1.8 }} />
                       </div>
-                      <span style={{ fontSize: '0.62rem', fontWeight: isActive ? 700 : 500, color: isActive ? '#F5A623' : '#9CA3AF', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.62rem', fontWeight: isActive ? 700 : 500, color: isActive ? navAccent : '#9CA3AF', whiteSpace: 'nowrap' }}>
                         {item.label}
                       </span>
                     </button>

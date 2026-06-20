@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   ChevronLeft, ChevronRight, Settings, Wallet, FileText, Shield, Phone, MessageSquare, Languages,
   LogOut, Plus, Minus, AlertCircle, Eye, X, Camera, GraduationCap,
-  Briefcase, Award, Upload, Check, Trash2,
+  Briefcase, Award, Upload, Check, Trash2, Headphones, MessageCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Language, LANG_LABELS, LANG_NAMES, translations } from './i18n';
@@ -29,6 +29,8 @@ interface ProfilePageProps {
   forceEditProfile?: boolean;
   onForceConsumed?: () => void;
   onEditSaved?: () => void;
+  forceWalletTxId?: number | null;
+  onForceWalletConsumed?: () => void;
 }
 
 export interface EducationEntry {
@@ -75,12 +77,51 @@ const CARD_BORDER = '1px solid rgba(15,22,35,0.06)';
 
 // status: 'pending' = 申請中, 'credited' = 已入賬, 'paid' = 已出糧
 const walletTxns = [
-  { id: 1, type: 'in' as const, status: 'credited' as const, amount: 680, desc: { 'zh-HK': '工資入帳', 'zh-CN': '工资入账', en: 'Wage Deposit' }, job: { 'zh-HK': '餐廳服務員', 'zh-CN': '餐厅服务员', en: 'Restaurant Server' }, company: '大家樂', date: '2026-06-19' },
-  { id: 2, type: 'out' as const, status: 'paid' as const, amount: 680, desc: { 'zh-HK': '出糧確認', 'zh-CN': '出粮确认', en: 'Payout Confirmed' }, job: { 'zh-HK': '邦芒公司', 'zh-CN': '邦芒公司', en: 'BM Platform' }, company: '', date: '2026-06-19' },
-  { id: 3, type: 'in' as const, status: 'pending' as const, amount: 950, desc: { 'zh-HK': '工資待入帳', 'zh-CN': '工资待入账', en: 'Wage Pending' }, job: { 'zh-HK': '倉務員', 'zh-CN': '仓务员', en: 'Warehouse Picker' }, company: 'SF Express', date: '2026-06-17' },
-  { id: 4, type: 'in' as const, status: 'credited' as const, amount: 750, desc: { 'zh-HK': '工資入帳', 'zh-CN': '工资入账', en: 'Wage Deposit' }, job: { 'zh-HK': '展覽助理', 'zh-CN': '展览助理', en: 'Exhibition Assistant' }, company: 'HKCEC', date: '2026-06-14' },
-  { id: 5, type: 'out' as const, status: 'paid' as const, amount: 2280, desc: { 'zh-HK': '出糧確認', 'zh-CN': '出粮确认', en: 'Payout Confirmed' }, job: { 'zh-HK': '邦芒公司', 'zh-CN': '邦芒公司', en: 'BM Platform' }, company: '', date: '2026-06-12' },
-  { id: 6, type: 'out' as const, status: 'pending' as const, amount: 750, desc: { 'zh-HK': '出糧申請中', 'zh-CN': '出粮申请中', en: 'Payout Requested' }, job: { 'zh-HK': '邦芒公司', 'zh-CN': '邦芒公司', en: 'BM Platform' }, company: '', date: '2026-06-10' },
+  {
+    id: 1, type: 'in' as const, status: 'credited' as const, amount: 640,
+    desc: { 'zh-HK': '工資入帳', 'zh-CN': '工资入账', en: 'Wage Deposit' },
+    job: { 'zh-HK': '餐飲服務員', 'zh-CN': '餐饮服务员', en: 'F&B Server' },
+    company: '美食集團', store: '銅鑼灣時代廣場', date: '2026-06-19',
+    attendanceDate: '2026年6月19日（五）', shiftStart: '10:00', shiftEnd: '18:00',
+    clockIn: '09:55', clockOut: '18:05', hours: 8, ratePerHour: 80,
+    payrollNote: '正常出勤，按實際工時計算。',
+  },
+  {
+    id: 2, type: 'out' as const, status: 'paid' as const, amount: 640,
+    desc: { 'zh-HK': '出糧確認', 'zh-CN': '出粮确认', en: 'Payout Confirmed' },
+    job: { 'zh-HK': 'NewBee 平台', 'zh-CN': 'NewBee 平台', en: 'NewBee Platform' },
+    company: 'NewBee Hong Kong Ltd.', store: '', date: '2026-06-19',
+  },
+  {
+    id: 3, type: 'in' as const, status: 'pending' as const, amount: 952,
+    desc: { 'zh-HK': '工資待入帳', 'zh-CN': '工资待入账', en: 'Wage Pending' },
+    job: { 'zh-HK': '倉務員', 'zh-CN': '仓务员', en: 'Warehouse Picker' },
+    company: 'SF Express 順豐速運', store: '荃灣倉庫', date: '2026-06-17',
+    attendanceDate: '2026年6月17日（三）', shiftStart: '08:00', shiftEnd: '16:00',
+    clockIn: '08:02', clockOut: '16:05', hours: 8, ratePerHour: 119,
+    payrollNote: '商戶確認工時和薪資中…',
+  },
+  {
+    id: 4, type: 'in' as const, status: 'credited' as const, amount: 720,
+    desc: { 'zh-HK': '工資入帳', 'zh-CN': '工资入账', en: 'Wage Deposit' },
+    job: { 'zh-HK': '展覽場地助理', 'zh-CN': '展览场地助理', en: 'Exhibition Assistant' },
+    company: 'HK Convention & Exhibition Centre', store: '灣仔會展中心', date: '2026-06-14',
+    attendanceDate: '2026年6月12日（五）', shiftStart: '14:00', shiftEnd: '22:00',
+    clockIn: '13:58', clockOut: '22:05', hours: 8, ratePerHour: 90,
+    payrollNote: '正常出勤，按實際工時計算。',
+  },
+  {
+    id: 5, type: 'out' as const, status: 'paid' as const, amount: 2280,
+    desc: { 'zh-HK': '出糧確認', 'zh-CN': '出粮确认', en: 'Payout Confirmed' },
+    job: { 'zh-HK': 'NewBee 平台', 'zh-CN': 'NewBee 平台', en: 'NewBee Platform' },
+    company: 'NewBee Hong Kong Ltd.', store: '', date: '2026-06-12',
+  },
+  {
+    id: 6, type: 'out' as const, status: 'pending' as const, amount: 720,
+    desc: { 'zh-HK': '出糧申請中', 'zh-CN': '出粮申请中', en: 'Payout Requested' },
+    job: { 'zh-HK': 'NewBee 平台', 'zh-CN': 'NewBee 平台', en: 'NewBee Platform' },
+    company: 'NewBee Hong Kong Ltd.', store: '', date: '2026-06-10',
+  },
 ];
 
 
@@ -1312,12 +1353,13 @@ type TxFilter = 'all' | 'pending' | 'credited' | 'paid';
 
 const FEEDBACK_EMAIL = 'support@newbee.hk';
 
-function WalletView({ lang, t, onPayoutPress }: { lang: Language; t: ReturnType<typeof translations[Language]>; onPayoutPress: () => void }) {
+function WalletView({ lang, t, onPayoutPress, initialTxId }: { lang: Language; t: ReturnType<typeof translations[Language]>; onPayoutPress: () => void; initialTxId?: number | null }) {
   const pendingBalance = 2899;
   const totalPaid = 22899;
   const [filter, setFilter] = useState<TxFilter>('all');
   const [showFeedback, setShowFeedback] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [selectedTxId, setSelectedTxId] = useState<number | null>(initialTxId ?? null);
 
   const filterTabs: { key: TxFilter; label: string }[] = [
     { key: 'all', label: '全部' },
@@ -1402,24 +1444,22 @@ function WalletView({ lang, t, onPayoutPress }: { lang: Language; t: ReturnType<
           )}
           {filtered.map((tx) => {
             const meta = statusMeta[tx.status];
+            const amtColor = tx.status === 'pending' ? '#D4891A' : tx.type === 'in' ? '#15803D' : '#D93025';
             return (
-              <div key={tx.id} className="rounded-2xl p-4" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
+              <button
+                key={tx.id}
+                onClick={() => setSelectedTxId(tx.id)}
+                className="w-full rounded-2xl p-4 text-left transition-all active:scale-[0.98]"
+                style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER, cursor: 'pointer' }}
+              >
                 <div className="flex items-start gap-3">
-                  <div
-                    className="shrink-0 flex items-center justify-center rounded-xl"
-                    style={{ width: 36, height: 36, background: tx.status === 'pending' ? '#FEF3DC' : tx.type === 'in' ? '#DCFCE7' : '#FEE2E2' }}
-                  >
-                    {tx.status === 'pending'
-                      ? <AlertCircle size={15} style={{ color: '#D4891A' }} />
-                      : tx.type === 'in'
-                        ? <Plus size={16} style={{ color: '#15803D' }} />
-                        : <Minus size={16} style={{ color: '#D93025' }} />
-                    }
+                  <div className="shrink-0 flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: tx.status === 'pending' ? '#FEF3DC' : tx.type === 'in' ? '#DCFCE7' : '#FEE2E2' }}>
+                    {tx.status === 'pending' ? <AlertCircle size={15} style={{ color: '#D4891A' }} /> : tx.type === 'in' ? <Plus size={16} style={{ color: '#15803D' }} /> : <Minus size={16} style={{ color: '#D93025' }} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F1623' }}>{tx.desc[lang]}</span>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 700, color: tx.status === 'pending' ? '#D4891A' : tx.type === 'in' ? '#15803D' : '#D93025', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 700, color: amtColor, whiteSpace: 'nowrap' }}>
                         {tx.type === 'in' ? '+' : '−'}HK${tx.amount.toLocaleString()}
                       </span>
                     </div>
@@ -1428,16 +1468,11 @@ function WalletView({ lang, t, onPayoutPress }: { lang: Language; t: ReturnType<
                     </p>
                     <div className="flex items-center justify-between mt-1.5">
                       <p style={{ fontSize: '0.73rem', color: '#9CA3AF' }}>{tx.date}</p>
-                      <span
-                        className="rounded-md px-2 py-0.5"
-                        style={{ background: meta.bg, color: meta.color, fontSize: '0.7rem', fontWeight: 700 }}
-                      >
-                        {meta.label}
-                      </span>
+                      <span className="rounded-md px-2 py-0.5" style={{ background: meta.bg, color: meta.color, fontSize: '0.7rem', fontWeight: 700 }}>{meta.label}</span>
                     </div>
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -1456,6 +1491,129 @@ function WalletView({ lang, t, onPayoutPress }: { lang: Language; t: ReturnType<
         </div>
         <div className="h-2" />
       </div>
+
+      {/* ── Transaction detail overlay ── */}
+      <AnimatePresence>
+        {selectedTxId !== null && (() => {
+          const tx = walletTxns.find((x) => x.id === selectedTxId);
+          if (!tx) return null;
+          const meta = statusMeta[tx.status];
+          const amtColor = tx.status === 'pending' ? '#D4891A' : tx.type === 'in' ? '#15803D' : '#D93025';
+          const isWage = tx.type === 'in';
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 z-20 flex flex-col"
+              style={{ background: '#F7F8FC' }}
+            >
+              <SubPageHeader
+                title={tx.desc[lang]}
+                onBack={() => setSelectedTxId(null)}
+              />
+              <div className="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-4" style={{ scrollbarWidth: 'none' }}>
+
+                {/* Amount hero */}
+                <div className="rounded-2xl p-5 flex flex-col items-center gap-2" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
+                  <span style={{ fontSize: '2.2rem', fontWeight: 900, color: amtColor, letterSpacing: '-0.03em' }}>
+                    {tx.type === 'in' ? '+' : '−'}HK${tx.amount.toLocaleString()}
+                  </span>
+                  <span className="rounded-full px-3 py-1" style={{ background: meta.bg, color: meta.color, fontSize: '0.75rem', fontWeight: 700 }}>
+                    {meta.label}
+                  </span>
+                  <p style={{ fontSize: '0.8rem', color: '#9CA3AF', margin: 0 }}>{tx.date}</p>
+                </div>
+
+                {/* Job info (wage entries) */}
+                {isWage && (tx as any).store !== undefined && (
+                  <div className="flex flex-col gap-0" style={{ background: '#FFFFFF', borderRadius: '1rem', boxShadow: CARD_SHADOW, border: CARD_BORDER, overflow: 'hidden' }}>
+                    <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(15,22,35,0.04)', background: '#F7F8FC' }}>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>崗位資訊</p>
+                    </div>
+                    {[
+                      { label: '崗位名',  value: tx.job[lang] },
+                      { label: '公司',    value: tx.company },
+                      { label: '門店',    value: (tx as any).store || '—' },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(15,22,35,0.04)' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>{label}</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0F1623', textAlign: 'right', maxWidth: '60%' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Attendance record (wage entries) */}
+                {isWage && (tx as any).attendanceDate && (
+                  <div className="flex flex-col gap-0" style={{ background: '#FFFFFF', borderRadius: '1rem', boxShadow: CARD_SHADOW, border: CARD_BORDER, overflow: 'hidden' }}>
+                    <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(15,22,35,0.04)', background: '#F7F8FC' }}>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>出勤記錄</p>
+                    </div>
+                    {[
+                      { label: '出勤日期', value: (tx as any).attendanceDate },
+                      { label: '班次時間', value: `${(tx as any).shiftStart} – ${(tx as any).shiftEnd}` },
+                      { label: '上班打卡', value: (tx as any).clockIn },
+                      { label: '下班打卡', value: (tx as any).clockOut },
+                      { label: '實際工時', value: `${(tx as any).hours}小時` },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(15,22,35,0.04)' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>{label}</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0F1623' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Payroll breakdown */}
+                {isWage && (tx as any).ratePerHour && (
+                  <div className="flex flex-col gap-0" style={{ background: '#FFFFFF', borderRadius: '1rem', boxShadow: CARD_SHADOW, border: CARD_BORDER, overflow: 'hidden' }}>
+                    <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(15,22,35,0.04)', background: '#F7F8FC' }}>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>薪資明細</p>
+                    </div>
+                    {[
+                      { label: '計薪方式', value: `HK$${(tx as any).ratePerHour}/小時` },
+                      { label: '確認工時', value: `${(tx as any).hours}小時` },
+                      { label: '確認薪資', value: `HK$${tx.amount.toLocaleString()}`, bold: true, green: true },
+                    ].map(({ label, value, bold, green }) => (
+                      <div key={label} className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(15,22,35,0.04)' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>{label}</span>
+                        <span style={{ fontSize: '0.9rem', fontWeight: bold ? 800 : 600, color: green ? '#15803D' : '#0F1623' }}>{value}</span>
+                      </div>
+                    ))}
+                    {(tx as any).payrollNote && (
+                      <div className="px-4 py-3 flex flex-col gap-1">
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#D4891A', textTransform: 'uppercase', letterSpacing: '0.05em' }}>薪資說明</span>
+                        <span style={{ fontSize: '0.82rem', color: '#92580A', lineHeight: 1.6 }}>{(tx as any).payrollNote}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Payout info (out type) */}
+                {!isWage && (
+                  <div className="flex flex-col gap-0" style={{ background: '#FFFFFF', borderRadius: '1rem', boxShadow: CARD_SHADOW, border: CARD_BORDER, overflow: 'hidden' }}>
+                    <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(15,22,35,0.04)', background: '#F7F8FC' }}>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>出糧資訊</p>
+                    </div>
+                    {[
+                      { label: '出糧平台', value: tx.company || 'NewBee Hong Kong Ltd.' },
+                      { label: '出糧日期', value: tx.date },
+                      { label: '出糧金額', value: `HK$${tx.amount.toLocaleString()}` },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(15,22,35,0.04)' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>{label}</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0F1623' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* Feedback modal */}
       <AnimatePresence>
@@ -1623,11 +1781,13 @@ function MainProfileView({ lang, user, t, editData, onNavigate, onLogout, onLang
   onLangChange: (l: Language) => void; isVerified?: boolean; onStartVerify?: () => void;
 }) {
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [showCsSheet, setShowCsSheet] = useState(false);
   const initials = editData.name.charAt(0).toUpperCase() || user.name.charAt(0).toUpperCase();
   const displayLangs = [...editData.languages.filter((l) => l !== '其他'), ...(editData.languages.includes('其他') && editData.languageOther ? [editData.languageOther] : [])];
   const topEdu = editData.education[0];
 
   return (
+    <>
     <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" style={{ scrollbarWidth: 'none' }}>
       {/* User card */}
       <div className="rounded-2xl p-4" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
@@ -1761,12 +1921,142 @@ function MainProfileView({ lang, user, t, editData, onNavigate, onLogout, onLang
         </AnimatePresence>
       </div>
 
+      {/* Contact support row */}
+      <button
+        onClick={() => setShowCsSheet(true)}
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all active:scale-[0.98]"
+        style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER, cursor: 'pointer' }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: '#EEF8FF' }}>
+            <Headphones size={16} style={{ color: '#3B5BDB' }} />
+          </div>
+          <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#0F1623' }}>聯繫平台客服</span>
+        </div>
+        <ChevronRight size={16} style={{ color: '#9CA3AF' }} />
+      </button>
+
       {/* Logout */}
       <button onClick={onLogout} className="w-full rounded-xl py-3 transition-all active:scale-[0.98]" style={{ background: 'transparent', border: '1.5px solid rgba(15,22,35,0.12)', color: '#6B7A99', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600 }}>
         <div className="flex items-center justify-center gap-2"><LogOut size={15} />{t.logout}</div>
       </button>
       <div className="h-2" />
     </div>
+
+    {/* ── Customer service sheet ── */}
+    <AnimatePresence>
+      {showCsSheet && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-40"
+            style={{ background: 'rgba(15,22,35,0.45)', backdropFilter: 'blur(2px)' }}
+            onClick={() => setShowCsSheet(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute left-0 right-0 bottom-0 z-50 rounded-t-2xl px-5 py-6 flex flex-col gap-5"
+            style={{ background: '#FFFFFF', boxShadow: '0 -8px 40px rgba(15,22,35,0.15)', maxHeight: '80vh', overflowY: 'auto' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 40, height: 40, background: '#EEF8FF' }}>
+                  <Headphones size={18} style={{ color: '#3B5BDB' }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>聯繫平台客服</p>
+                  <p style={{ fontSize: '0.75rem', color: '#9CA3AF', margin: '2px 0 0 0' }}>NewBee Hong Kong Ltd.</p>
+                </div>
+              </div>
+              <button onClick={() => setShowCsSheet(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <X size={18} style={{ color: '#9CA3AF' }} />
+              </button>
+            </div>
+
+            {/* WhatsApp QR */}
+            <div className="rounded-2xl p-4 flex flex-col items-center gap-3" style={{ background: '#F7F8FC', border: CARD_BORDER }}>
+              <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F1623', margin: 0, alignSelf: 'flex-start' }}>WhatsApp 客服</p>
+              <div style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 12px rgba(15,22,35,0.1)' }}>
+                {/* QR code placeholder SVG */}
+                <svg width="140" height="140" viewBox="0 0 100 100" style={{ display: 'block', background: '#FFFFFF' }}>
+                  {/* TL finder */}
+                  <rect x="4"  y="4"  width="26" height="26" rx="3" fill="#0F1623"/>
+                  <rect x="8"  y="8"  width="18" height="18" rx="1" fill="#fff"/>
+                  <rect x="12" y="12" width="10" height="10" rx="1" fill="#0F1623"/>
+                  {/* TR finder */}
+                  <rect x="70" y="4"  width="26" height="26" rx="3" fill="#0F1623"/>
+                  <rect x="74" y="8"  width="18" height="18" rx="1" fill="#fff"/>
+                  <rect x="78" y="12" width="10" height="10" rx="1" fill="#0F1623"/>
+                  {/* BL finder */}
+                  <rect x="4"  y="70" width="26" height="26" rx="3" fill="#0F1623"/>
+                  <rect x="8"  y="74" width="18" height="18" rx="1" fill="#fff"/>
+                  <rect x="12" y="78" width="10" height="10" rx="1" fill="#0F1623"/>
+                  {/* BR alignment */}
+                  <rect x="70" y="70" width="10" height="10" rx="1" fill="#0F1623"/>
+                  {/* Data modules */}
+                  {([
+                    [36,4],[40,4],[48,4],[56,4],[64,4],
+                    [36,8],[44,8],[52,8],[60,8],[64,8],
+                    [40,12],[48,12],[56,12],[64,12],
+                    [36,16],[40,16],[52,16],[60,16],
+                    [36,20],[44,20],[48,20],[56,20],[64,20],
+                    [4,36],[8,36],[16,36],[24,36],[28,36],
+                    [4,40],[12,40],[20,40],[28,40],
+                    [4,44],[8,44],[16,44],[24,44],[28,44],
+                    [4,48],[12,48],[20,48],
+                    [4,52],[8,52],[16,52],[24,52],[28,52],
+                    [36,36],[40,36],[44,36],[48,36],[52,36],[56,36],[60,36],[64,36],[68,36],[72,36],[76,36],[80,36],[84,36],[88,36],[92,36],[96,36],
+                    [36,40],[48,40],[56,40],[64,40],[72,40],[80,40],[88,40],[96,40],
+                    [36,44],[40,44],[44,44],[52,44],[60,44],[68,44],[76,44],[84,44],[92,44],
+                    [36,48],[44,48],[52,48],[64,48],[72,48],[80,48],[88,48],[96,48],
+                    [36,52],[40,52],[48,52],[56,52],[64,52],[76,52],[84,52],[92,52],
+                    [36,56],[44,56],[52,56],[60,56],[72,56],[80,56],[88,56],[96,56],
+                    [36,60],[40,60],[48,60],[56,60],[64,60],[76,60],[84,60],[92,60],
+                    [36,64],[44,64],[52,64],[60,64],[68,64],[76,64],[88,64],[96,64],
+                    [36,68],[40,68],[48,68],[56,68],[64,68],[80,68],[88,68],[92,68],
+                    [36,72],[44,72],[52,72],[60,72],[80,72],[88,72],[96,72],
+                    [36,76],[48,76],[60,76],[68,76],[84,76],[92,76],
+                    [36,80],[40,80],[48,80],[56,80],[64,80],[76,80],[88,80],[96,80],
+                    [36,84],[44,84],[52,84],[68,84],[80,84],[92,84],
+                    [36,88],[40,88],[52,88],[60,88],[72,88],[80,88],[88,88],
+                    [36,92],[48,92],[56,92],[64,92],[76,92],[84,92],[92,92],
+                    [36,96],[40,96],[52,96],[60,96],[72,96],[80,96],[88,96],
+                  ] as [number, number][]).map(([x, y], i) => (
+                    <rect key={i} x={x} y={y} width="4" height="4" fill="#0F1623"/>
+                  ))}
+                </svg>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center rounded-lg" style={{ width: 26, height: 26, background: '#25D366' }}>
+                  <MessageCircle size={13} style={{ color: '#FFFFFF' }} />
+                </div>
+                <p style={{ fontSize: '0.78rem', color: '#6B7A99', margin: 0 }}>掃描 QR Code 添加 WhatsApp 客服</p>
+              </div>
+            </div>
+
+            {/* Email + hours */}
+            <div className="rounded-2xl flex flex-col" style={{ background: '#F7F8FC', border: CARD_BORDER, overflow: 'hidden' }}>
+              {[
+                { label: '客服電郵', value: 'support@newbee.hk', blue: true },
+                { label: '服務時間', value: '週一至週五 09:00–18:00', blue: false },
+              ].map(({ label, value, blue }, i) => (
+                <div key={label} className="flex items-center justify-between px-4 py-3" style={{ borderTop: i > 0 ? '1px solid rgba(15,22,35,0.06)' : 'none' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#9CA3AF' }}>{label}</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: blue ? '#3B5BDB' : '#374151' }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ fontSize: '0.72rem', color: '#CBD1E1', textAlign: 'center', margin: 0 }}>
+              如屬緊急情況，可透過 WhatsApp 即時聯繫
+            </p>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+    </>
   );
 }
 
@@ -1790,10 +2080,12 @@ export function ProfilePage({
   lang, onLangChange, user, onLogout, isVerified, onStartVerify,
   editData, onEditDataChange,
   forceEditProfile, onForceConsumed, onEditSaved,
+  forceWalletTxId, onForceWalletConsumed,
   onViewJob,
 }: ProfilePageProps & { onViewJob?: (jobId: number) => void }) {
   const t = translations[lang];
   const [stack, setStack] = useState<ProfileView[]>(['main']);
+  const [deepLinkTxId, setDeepLinkTxId] = useState<number | null>(null);
 
   const current = stack[stack.length - 1];
   const push = (v: ProfileView) => setStack((s) => [...s, v]);
@@ -1805,6 +2097,14 @@ export function ProfilePage({
       onForceConsumed?.();
     }
   }, [forceEditProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (forceWalletTxId != null) {
+      setDeepLinkTxId(forceWalletTxId);
+      setStack(['main', 'wallet']);
+      onForceWalletConsumed?.();
+    }
+  }, [forceWalletTxId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const titles: Record<ProfileView, string> = {
     main: t.personalCenter,
@@ -1846,7 +2146,7 @@ export function ProfilePage({
             <SettingsView lang={lang} user={user} t={t} />
           )}
           {current === 'wallet' && (
-            <WalletView lang={lang} t={t} onPayoutPress={() => push('payout')} />
+            <WalletView lang={lang} t={t} onPayoutPress={() => push('payout')} initialTxId={deepLinkTxId} />
           )}
           {current === 'payout' && (
             <PayoutView lang={lang} t={t} onBack={pop} />

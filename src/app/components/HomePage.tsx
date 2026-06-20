@@ -95,7 +95,7 @@ export function HomePage({ lang, onJobPress }: HomePageProps) {
         style={{ background: '#FFFFFF', borderBottom: '1px solid rgba(15,22,35,0.06)', zIndex: 10 }}
       >
         {/* Row 1: NewBee logo */}
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-3" style={{ paddingRight: 96 }}>
           <NewBeeLogo />
         </div>
 
