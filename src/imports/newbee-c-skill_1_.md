@@ -1,4 +1,6 @@
-Keep NewBee C-end mobile PWA screens visually consistent while allowing product features, pages, and user flows to evolve.
+---
+name: newbee-c-design
+description: Keep NewBee C-end mobile PWA screens visually consistent while allowing product features, pages, and user flows to evolve.
 ---
 
 You are designing NewBee C-end mobile PWA screens.

@@ -248,68 +248,72 @@ function SectionHeader({ label }: { label: string }) {
 }
 
 // ── Main component ────────────────────────────────────────
+// Tabs and allowed categories per mode
+const EMPLOYED_KEYS: TabKey[] = ['all', 'system', 'attendance', 'payroll'];
+const SEEKING_KEYS:  TabKey[] = ['all', 'system', 'job'];
+const EMPLOYED_CATS: NotifCategory[] = ['system', 'attendance', 'payroll'];
+const SEEKING_CATS:  NotifCategory[] = ['system', 'job'];
+
 interface MessagesPageProps {
   onNavigate?: (target: NavTarget) => void;
+  appMode?: 'seeking' | 'employed';
 }
 
-export function MessagesPage({ onNavigate }: MessagesPageProps = {}) {
+export function MessagesPage({ onNavigate, appMode = 'seeking' }: MessagesPageProps) {
+  const allowedKeys = appMode === 'employed' ? EMPLOYED_KEYS : SEEKING_KEYS;
+  const allowedCats = appMode === 'employed' ? EMPLOYED_CATS : SEEKING_CATS;
+  const visibleTabs = TABS.filter((t) => allowedKeys.includes(t.key));
+
   const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [notifications, setNotifications] = useState<Notification[]>(ALL_NOTIFICATIONS);
+
+  // Reset tab if it's not available in the current mode
+  const safeTab: TabKey = allowedKeys.includes(activeTab) ? activeTab : 'all';
 
   function markRead(id: number) {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
   }
-
   function markAllRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   }
 
-  const filtered = activeTab === 'all'
-    ? notifications
-    : notifications.filter((n) => n.category === activeTab);
+  // Filter by mode first, then by tab
+  const modeFiltered = notifications.filter((n) => allowedCats.includes(n.category));
+  const filtered = safeTab === 'all'
+    ? modeFiltered
+    : modeFiltered.filter((n) => n.category === safeTab);
 
-  const todayList    = filtered.filter((n) => n.group === 'today');
-  const earlierList  = filtered.filter((n) => n.group === 'earlier');
+  const todayList   = filtered.filter((n) => n.group === 'today');
+  const earlierList = filtered.filter((n) => n.group === 'earlier');
 
-  const unreadCount = (key: TabKey) =>
-    (key === 'all' ? notifications : notifications.filter((n) => n.category === key))
-      .filter((n) => !n.isRead).length;
-
+  const unreadCount = (key: TabKey) => {
+    const base = key === 'all' ? modeFiltered : modeFiltered.filter((n) => n.category === key);
+    return base.filter((n) => !n.isRead).length;
+  };
   const totalUnread = unreadCount('all');
 
   return (
     <div className="size-full flex flex-col overflow-hidden" style={{ background: '#F7F8FC' }}>
       {/* Header */}
       <div className="shrink-0 px-4 pt-4 pb-0" style={{ background: '#FFFFFF', borderBottom: CARD_BORDER }}>
-        <div className="flex items-center gap-2 mb-3">
+        {/* Title row — no button */}
+        <div className="flex items-center gap-2 mb-2.5">
           <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F1623', margin: 0, letterSpacing: '-0.02em' }}>訊息中心</h1>
           {totalUnread > 0 && (
-            <span className="flex items-center justify-center rounded-full" style={{ minWidth: 18, height: 18, background: '#3B5BDB', padding: '0 4px', fontSize: '0.6rem', fontWeight: 800, color: '#FFFFFF' }}>
-              {totalUnread}
-            </span>
+            null
           )}
-          <div style={{ flex: 1 }} />
-          <button
-            onClick={markAllRead}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0',
-              fontSize: '0.75rem', fontWeight: 600, color: '#3B5BDB',
-              visibility: totalUnread > 0 ? 'visible' : 'hidden',
-            }}
-          >
-            全部已讀
-          </button>
         </div>
 
-        {/* Tab strip */}
-        <div className="flex gap-1 overflow-x-auto pb-3" style={{ scrollbarWidth: 'none' }}>
-          {TABS.map(({ key, label }) => {
+        {/* Tab strip + 全部已讀 on right */}
+        <div className="flex items-center gap-2 pb-3">
+          <div className="flex gap-1 overflow-x-auto flex-1" style={{ scrollbarWidth: 'none' }}>
+          {visibleTabs.map(({ key, label }) => {
             const count = unreadCount(key);
-            const isActive = activeTab === key;
+            const isActive = safeTab === key;
             return (
               <button
                 key={key}
-                onClick={() => setActiveTab(key)}
+                onClick={() => setActiveTab(key as TabKey)}
                 className="shrink-0 flex items-center gap-1 rounded-xl px-3.5 py-1.5 transition-all"
                 style={{
                   background: isActive ? '#0F1623' : '#EEF1F8',
@@ -330,6 +334,14 @@ export function MessagesPage({ onNavigate }: MessagesPageProps = {}) {
               </button>
             );
           })}
+          </div>
+          {/* 全部已讀 on right of tab row */}
+          <button
+            onClick={markAllRead}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontSize: '0.73rem', fontWeight: 600, color: '#3B5BDB', visibility: totalUnread > 0 ? 'visible' : 'hidden', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            全部已讀
+          </button>
         </div>
       </div>
 

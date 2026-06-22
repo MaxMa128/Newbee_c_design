@@ -395,7 +395,7 @@ export default function App() {
                   {appMode === 'seeking' && activeNav === 2 && (
                     <motion.div key="messages-seeking" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <MessagesPage onNavigate={handleMessageNavigation} />
+                      <MessagesPage onNavigate={handleMessageNavigation} appMode={appMode} />
                     </motion.div>
                   )}
                   {appMode === 'seeking' && activeNav === 3 && (
@@ -434,7 +434,7 @@ export default function App() {
                   {appMode === 'employed' && activeNav === 2 && (
                     <motion.div key="messages-employed" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <MessagesPage onNavigate={handleMessageNavigation} />
+                      <MessagesPage onNavigate={handleMessageNavigation} appMode={appMode} />
                     </motion.div>
                   )}
                   {appMode === 'employed' && activeNav === 3 && (
@@ -509,8 +509,8 @@ export default function App() {
                 )}
               </AnimatePresence>
 
-              {/* Floating mode switch — hidden on Messages (2) and Profile (3) tabs */}
-              {activeNav < 2 && <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 120, pointerEvents: 'auto' }}>
+              {/* Floating mode switch — shown on all main tabs */}
+              <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 120, pointerEvents: 'auto' }}>
                 <div
                   className="flex rounded-full p-0.5"
                   style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', boxShadow: '0 2px 12px rgba(15,22,35,0.14)', border: '1px solid rgba(15,22,35,0.08)' }}
@@ -540,7 +540,7 @@ export default function App() {
                     求職
                   </button>
                 </div>
-              </div>}
+              </div>
 
               {/* Bottom nav */}
               <div

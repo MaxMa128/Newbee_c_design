@@ -1687,8 +1687,9 @@ function WalletView({ lang, t, onPayoutPress, initialTxId }: { lang: Language; t
 function PayoutView({ lang, t, onBack }: { lang: Language; t: ReturnType<typeof translations[Language]>; onBack: () => void }) {
   const PENDING_BALANCE = 2899;
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState<'cash' | 'bank'>('cash');
+  const [method, setMethod] = useState<'cash' | 'bank' | 'fps'>('cash');
   const [bankDetails, setBankDetails] = useState('');
+  const [fpsAccount, setFpsAccount] = useState('');
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -1744,26 +1745,50 @@ function PayoutView({ lang, t, onBack }: { lang: Language; t: ReturnType<typeof 
         </div>
         <div>
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99', display: 'block', marginBottom: 10 }}>{t.paymentMethod}</span>
-          <div className="flex gap-3">
-            {(['cash', 'bank'] as const).map((m) => (
-              <label key={m} className="flex items-center gap-2 cursor-pointer">
-                <div onClick={() => setMethod(m)} className="flex items-center justify-center rounded-full transition-all" style={{ width: 18, height: 18, border: `2px solid ${method === m ? '#F5A623' : 'rgba(15,22,35,0.2)'}`, background: method === m ? '#F5A623' : 'transparent' }}>
-                  {method === m && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FFFFFF' }} />}
+          <div className="flex flex-col gap-2.5">
+            {/* Cash & Bank Transfer */}
+            <div className="flex gap-4">
+              {(['cash', 'bank'] as const).map((m) => (
+                <label key={m} className="flex items-center gap-2 cursor-pointer">
+                  <div onClick={() => setMethod(m)} className="flex items-center justify-center rounded-full transition-all" style={{ width: 18, height: 18, border: `2px solid ${method === m ? '#F5A623' : 'rgba(15,22,35,0.2)'}`, background: method === m ? '#F5A623' : 'transparent', flexShrink: 0 }}>
+                    {method === m && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FFFFFF' }} />}
+                  </div>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#0F1623' }}>{m === 'cash' ? t.cash : t.bankTransfer}</span>
+                </label>
+              ))}
+            </div>
+            {/* FPS option */}
+            <label className="flex items-center gap-2 cursor-pointer rounded-xl px-3 py-2.5 transition-all" style={{ background: method === 'fps' ? '#F0FFF4' : '#F7F8FC', border: `1.5px solid ${method === 'fps' ? 'rgba(21,128,61,0.3)' : 'rgba(15,22,35,0.07)'}` }} onClick={() => setMethod('fps')}>
+              <div className="flex items-center justify-center rounded-full transition-all shrink-0" style={{ width: 18, height: 18, border: `2px solid ${method === 'fps' ? '#F5A623' : 'rgba(15,22,35,0.2)'}`, background: method === 'fps' ? '#F5A623' : 'transparent' }}>
+                {method === 'fps' && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FFFFFF' }} />}
+              </div>
+              <div className="flex items-center gap-2 flex-1">
+                <div className="flex items-center justify-center rounded-md" style={{ width: 28, height: 18, background: '#0AA66E', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.5rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em' }}>轉</span>
                 </div>
-                <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#0F1623' }}>{m === 'cash' ? t.cash : t.bankTransfer}</span>
-              </label>
-            ))}
+                <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#0F1623' }}>轉速達（FPS）</span>
+              </div>
+            </label>
           </div>
         </div>
         {method === 'bank' && <StyledInput label={t.bankDetails} value={bankDetails} onChange={setBankDetails} placeholder={t.bankDetailsPlaceholder} />}
+        {method === 'fps' && (
+          <StyledInput
+            label="轉速達帳戶"
+            required
+            value={fpsAccount}
+            onChange={setFpsAccount}
+            placeholder="請輸入手機號碼、身分證號碼或電郵地址"
+          />
+        )}
         <StyledInput label={t.notesLabel} value={notes} onChange={setNotes} placeholder={t.notesPlaceholder} />
       </div>
       <div className="flex gap-3">
         <button onClick={onBack} className="flex-1 rounded-xl py-3" style={{ background: '#EEF1F8', color: '#6B7A99', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>{t.cancelBtn}</button>
         <button
-          onClick={() => !amountError && amountNum > 0 && setSubmitted(true)}
+          onClick={() => { const fpsOk = method !== 'fps' || !!fpsAccount.trim(); if (!amountError && amountNum > 0 && fpsOk) setSubmitted(true); }}
           className="rounded-xl py-3 transition-all active:scale-[0.98]"
-          style={{ flex: 2, background: amountError || amountNum === 0 ? '#E5E7EB' : '#F5A623', color: amountError || amountNum === 0 ? '#9CA3AF' : '#0F1623', border: 'none', cursor: amountError || amountNum === 0 ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 700 }}
+          style={{ flex: 2, background: (amountError || amountNum === 0 || (method === 'fps' && !fpsAccount.trim())) ? '#E5E7EB' : '#F5A623', color: (amountError || amountNum === 0 || (method === 'fps' && !fpsAccount.trim())) ? '#9CA3AF' : '#0F1623', border: 'none', cursor: (amountError || amountNum === 0 || (method === 'fps' && !fpsAccount.trim())) ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 700 }}
         >
           {t.submitRequest}
         </button>
