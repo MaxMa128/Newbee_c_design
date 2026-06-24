@@ -69,8 +69,9 @@ const WEEK_SHIFTS: WeekShift[] = [
 ];
 
 const SUPPLEMENT_RECORDS = [
-  { id: 1, date: '6月10日（三）', reason: '手機沒電，忘記打卡',     status: 'approved' as const, at: '6月10日 20:15' },
-  { id: 2, date: '6月3日（二）',  reason: '遲到/早退，交通意外延誤',      status: 'rejected' as const, at: '6月3日 19:30'  },
+  { id: 1, date: '6月10日（三）', reason: '手機沒電，忘記打卡',       status: 'approved' as const, at: '6月10日 20:15', rejectReason: undefined as string | undefined },
+  { id: 2, date: '6月3日（二）',  reason: '遲到，交通意外延誤',        status: 'rejected' as const, at: '6月3日 19:30',  rejectReason: '補打卡時間與實際記錄不符，請重新申請。' },
+  { id: 3, date: '5月28日（四）', reason: '設備故障，無法正常打卡',    status: 'pending'  as const, at: '5月28日 21:00', rejectReason: undefined },
 ];
 
 const LEAVE_HISTORY = [
@@ -91,7 +92,7 @@ const RECORD_STATUS = {
 };
 
 type ClockState = 'idle' | 'in' | 'out';
-type AttendanceView = 'main' | 'leave' | 'overtime';
+type AttendanceView = 'main' | 'leave' | 'overtime' | 'supplement-select' | 'supplement-detail';
 type Sheet =
   | null
   | 'shift-select'
@@ -111,24 +112,7 @@ function pad(n: number) { return String(n).padStart(2, '0'); }
 // ── Reusable record list ──────────────────────────────────
 function SupplementRecordList() {
   return (
-    <div className="flex flex-col gap-2">
-      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#9CA3AF', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>補打卡申請記錄</p>
-      {SUPPLEMENT_RECORDS.map((r) => {
-        const s = RECORD_STATUS[r.status];
-        return (
-          <div key={r.id} className="rounded-xl px-3.5 py-3 flex items-start gap-3" style={{ background: '#F7F8FC', border: CARD_BORDER }}>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{r.date}</p>
-                <span className="rounded-full px-2 py-0.5" style={{ background: s.bg, color: s.color, fontSize: '0.65rem', fontWeight: 700 }}>{s.label}</span>
-              </div>
-              <p style={{ fontSize: '0.73rem', color: '#9CA3AF', margin: 0 }}>{r.reason}</p>
-            </div>
-            <p style={{ fontSize: '0.65rem', color: '#CBD1E1', margin: 0, flexShrink: 0 }}>{r.at}</p>
-          </div>
-        );
-      })}
-    </div>
+    null
   );
 }
 
@@ -271,7 +255,7 @@ function SheetOverlay({ onClose, children, zIndex = 50 }: { onClose: () => void;
 }
 
 // ── Main component ────────────────────────────────────────
-export function EmployedWorkPage() {
+export function EmployedWorkPage({ onSubPageChange }: { onSubPageChange?: (active: boolean) => void }) {
   const now = useLiveClock();
   const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
@@ -294,9 +278,10 @@ export function EmployedWorkPage() {
   const [supplementEndTime, setSupplementEndTime] = useState('');
   const [supplementReason, setSupplementReason] = useState('');
   const [supplementPhotoName, setSupplementPhotoName] = useState<string | null>(null);
-  // Sub-page navigation (leave / overtime full-page views)
+  // Sub-page navigation
   const [attendanceView, setAttendanceView] = useState<AttendanceView>('main');
   // Leave form
+  const [leaveType, setLeaveType] = useState('');
   const [leaveStartDate, setLeaveStartDate] = useState('');
   const [leaveEndDate, setLeaveEndDate] = useState('');
   const [leaveReason, setLeaveReason] = useState('');
@@ -309,6 +294,11 @@ export function EmployedWorkPage() {
   const [otReason, setOtReason] = useState('');
   const [otPhotoName, setOtPhotoName] = useState<string | null>(null);
   const [otSubmitted, setOtSubmitted] = useState(false);
+  // Supplement page
+  const [selectedAbnormalDay, setSelectedAbnormalDay] = useState<WeekDay | null>(null);
+  const [suppPageReason, setSuppPageReason] = useState('');
+  const [suppPagePhoto, setSuppPagePhoto] = useState<string | null>(null);
+  const [suppPageSubmitted, setSuppPageSubmitted] = useState(false);
 
   const currentJob = TODAY_JOBS[jobIdx];
   const hasMultipleJobs = TODAY_JOBS.length > 1;
@@ -371,7 +361,7 @@ export function EmployedWorkPage() {
   }
 
   function handleLeaveSubmit() {
-    if (!leaveStartDate || !leaveReason.trim()) return;
+    if (!leaveType || !leaveStartDate || !leaveReason.trim()) return;
     setLeaveSubmitted(true);
   }
 
@@ -380,14 +370,22 @@ export function EmployedWorkPage() {
     setOtSubmitted(true);
   }
 
+  function goMain() { setAttendanceView('main'); onSubPageChange?.(false); }
+
   function openLeave() {
-    setLeaveStartDate(''); setLeaveEndDate(''); setLeaveReason(''); setLeavePhotoName(null); setLeaveSubmitted(false);
-    setAttendanceView('leave');
+    setLeaveType(''); setLeaveStartDate(''); setLeaveEndDate(''); setLeaveReason(''); setLeavePhotoName(null); setLeaveSubmitted(false);
+    setAttendanceView('leave'); onSubPageChange?.(true);
   }
 
   function openOvertime() {
     setOtDate(''); setOtStart(''); setOtEnd(''); setOtReason(''); setOtPhotoName(null); setOtSubmitted(false);
-    setAttendanceView('overtime');
+    setAttendanceView('overtime'); onSubPageChange?.(true);
+  }
+
+  function openSupplement() {
+    setSelectedAbnormalDay(null);
+    setSuppPageReason(''); setSuppPagePhoto(null); setSuppPageSubmitted(false);
+    setAttendanceView('supplement-select'); onSubPageChange?.(true);
   }
 
   const btnCfg = {
@@ -418,7 +416,7 @@ export function EmployedWorkPage() {
                 本週有 {abnormals.length} 天考勤異常
               </span>
             </div>
-            <span style={{ fontSize: '0.75rem', color: '#D4891A', fontWeight: 600 }}>查看並處理 ›</span>
+            <span style={{ fontSize: '0.75rem', color: '#D4891A', fontWeight: 600 }}>查看 ›</span>
           </button>
         )}
 
@@ -532,7 +530,7 @@ export function EmployedWorkPage() {
                 );
               })}
             </div>
-            <p style={{ fontSize: '0.68rem', color: '#9CA3AF', margin: 0, textAlign: 'center' }}>點擊日期查看當天排班</p>
+            
             <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
             {/* Weekly stats — derived from WEEK_DAYS mock data */}
             {(() => {
@@ -564,54 +562,22 @@ export function EmployedWorkPage() {
           const dayShifts = WEEK_SHIFTS.filter((s) => s.dateNum === selectedWeekDateNum);
           const day = WEEK_DAYS.find((d) => d.dateNum === selectedWeekDateNum);
           return (
-            <motion.div
-              key={selectedWeekDateNum}
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <h3 style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                  6月{selectedWeekDateNum}日（週{day?.dayLabel}）的排班
-                </h3>
-                <button onClick={() => setSelectedWeekDateNum(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                  <XIcon size={15} style={{ color: '#CBD1E1' }} />
-                </button>
-              </div>
-              {dayShifts.length === 0 ? (
-                <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: '#F7F8FC', border: CARD_BORDER }}>
-                  <span style={{ fontSize: '0.85rem', color: '#9CA3AF' }}>此日無排班記錄</span>
-                </div>
-              ) : (
-                dayShifts.map((s) => (
-                  <DayShiftCard
-                    key={s.id}
-                    shift={s}
-                    onConfirm={handleShiftConfirm}
-                    onSupplement={handleShiftSupplement}
-                  />
-                ))
-              )}
-            </motion.div>
+            null
           );
         })()}
 
-        {/* ── Leave & Overtime entry buttons — same row ── */}
-        <div className="flex gap-3">
+        {/* ── Leave / Overtime / Supplement entry buttons ── */}
+        <div className="flex gap-2">
           {[
-            { label: '請假申請', sub: '填寫請假日期', icon: <Calendar size={15} style={{ color: '#3B5BDB' }} />, iconBg: '#EEF8FF', fn: openLeave },
-            { label: '加班申請', sub: '登記加班時間', icon: <Clock size={15} style={{ color: '#D4891A' }} />, iconBg: '#FEF3DC', fn: openOvertime },
-          ].map(({ label, sub, icon, iconBg, fn }) => (
-            <button key={label} onClick={fn} className="flex-1 flex items-center gap-2.5 rounded-2xl px-3.5 py-3 transition-all active:scale-[0.97]" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER, cursor: 'pointer' }}>
-              <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 32, height: 32, background: iconBg }}>
+            { label: '請假申請', icon: <Calendar size={14} style={{ color: '#3B5BDB' }} />, iconBg: '#EEF8FF', fn: openLeave },
+            { label: '加班申請', icon: <Clock size={14} style={{ color: '#D4891A' }} />, iconBg: '#FEF3DC', fn: openOvertime },
+            { label: '補打卡申請', icon: <Camera size={14} style={{ color: '#15803D' }} />, iconBg: '#DCFCE7', fn: openSupplement },
+          ].map(({ label, icon, iconBg, fn }) => (
+            <button key={label} onClick={fn} className="flex-1 flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 transition-all active:scale-[0.97]" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER, cursor: 'pointer' }}>
+              <div className="flex items-center justify-center rounded-xl" style={{ width: 30, height: 30, background: iconBg }}>
                 {icon}
               </div>
-              <div className="text-left flex-1">
-                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{label}</p>
-                <p style={{ fontSize: '0.65rem', color: '#9CA3AF', margin: '1px 0 0 0' }}>{sub}</p>
-              </div>
+              <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0F1623', margin: 0, textAlign: 'center', lineHeight: 1.3 }}>{label}</p>
             </button>
           ))}
         </div>
@@ -677,16 +643,8 @@ export function EmployedWorkPage() {
                     <span className="rounded-full px-2.5 py-0.5" style={{ background: cfg.bg, color: cfg.color, fontSize: '0.68rem', fontWeight: 700 }}>{cfg.label}</span>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setSheet(null)}
-                      className="flex-1 rounded-xl py-2.5" style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#6B7A99' }}>
-                      確認{isLate ? '遲到/早退' : '缺勤'}
-                    </button>
-                    <button onClick={() => {
-                      if (ws) handleShiftSupplement(ws);
-                      else { setSupplementTargetDay(d); setSupplementStartTime(d.scheduledStart ?? ''); setSupplementEndTime(d.scheduledEnd ?? ''); setSupplementReason(''); setSupplementPhotoName(null); setSheet('supplement-form'); }
-                    }} className="flex-1 rounded-xl py-2.5" style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#0F1623' }}>
-                      申請補打卡
-                    </button>
+                    
+                    
                   </div>
                 </div>
               );
@@ -1041,7 +999,7 @@ export function EmployedWorkPage() {
           >
             {/* Header */}
             <div className="shrink-0 flex items-center gap-3 px-4 py-3" style={{ background: '#FFFFFF', borderBottom: CARD_BORDER }}>
-              <button onClick={() => setAttendanceView('main')} className="flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: '#EEF1F8', border: 'none', cursor: 'pointer' }}>
+              <button onClick={goMain} className="flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: '#EEF1F8', border: 'none', cursor: 'pointer' }}>
                 <ChevronLeft size={18} style={{ color: '#0F1623' }} />
               </button>
               <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>請假申請</h2>
@@ -1056,10 +1014,23 @@ export function EmployedWorkPage() {
                     <p style={{ fontSize: '1rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>請假申請已提交</p>
                     <p style={{ fontSize: '0.82rem', color: '#6B7A99', margin: '6px 0 0 0' }}>請等待商戶審核，結果將透過通知告知</p>
                   </div>
-                  <button onClick={() => setAttendanceView('main')} className="rounded-xl px-6 py-2.5" style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#6B7A99' }}>返回</button>
+                  <button onClick={goMain} className="rounded-xl px-6 py-2.5" style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#6B7A99' }}>返回</button>
                 </div>
               ) : (
                 <div className="rounded-2xl p-4 flex flex-col gap-4" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
+                  {/* Leave type */}
+                  <div className="flex flex-col gap-2">
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99' }}>請假類型 <span style={{ color: '#D93025' }}>*</span></span>
+                    <div className="flex flex-wrap gap-2">
+                      {['事假', '病假', '產假/侍產假', '年假', '調休', '其他'].map((t) => (
+                        <button key={t} onClick={() => setLeaveType(t)}
+                          className="rounded-full px-3 py-1.5 transition-all"
+                          style={{ background: leaveType === t ? '#3B5BDB' : '#F7F8FC', color: leaveType === t ? '#FFFFFF' : '#6B7A99', border: `1.5px solid ${leaveType === t ? '#3B5BDB' : 'rgba(15,22,35,0.1)'}`, fontSize: '0.82rem', fontWeight: leaveType === t ? 700 : 500, cursor: 'pointer' }}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex gap-3">
                     {[{ label: '開始日期', val: leaveStartDate, set: setLeaveStartDate, req: true },
                       { label: '結束日期', val: leaveEndDate,   set: setLeaveEndDate,   req: false }]
@@ -1092,8 +1063,8 @@ export function EmployedWorkPage() {
                       </label>
                     )}
                   </div>
-                  <button onClick={handleLeaveSubmit} disabled={!leaveStartDate || !leaveReason.trim()} className="w-full rounded-xl py-3 transition-all active:scale-[0.98]"
-                    style={{ background: (leaveStartDate && leaveReason.trim()) ? '#3B5BDB' : '#EEF1F8', color: (leaveStartDate && leaveReason.trim()) ? '#FFFFFF' : '#9CA3AF', border: 'none', cursor: (leaveStartDate && leaveReason.trim()) ? 'pointer' : 'not-allowed', fontSize: '0.95rem', fontWeight: 700 }}>
+                  <button onClick={handleLeaveSubmit} disabled={!leaveType || !leaveStartDate || !leaveReason.trim()} className="w-full rounded-xl py-3 transition-all active:scale-[0.98]"
+                    style={{ background: (leaveType && leaveStartDate && leaveReason.trim()) ? '#3B5BDB' : '#EEF1F8', color: (leaveType && leaveStartDate && leaveReason.trim()) ? '#FFFFFF' : '#9CA3AF', border: 'none', cursor: (leaveType && leaveStartDate && leaveReason.trim()) ? 'pointer' : 'not-allowed', fontSize: '0.95rem', fontWeight: 700 }}>
                     提交請假申請
                   </button>
                 </div>
@@ -1132,7 +1103,7 @@ export function EmployedWorkPage() {
           >
             {/* Header */}
             <div className="shrink-0 flex items-center gap-3 px-4 py-3" style={{ background: '#FFFFFF', borderBottom: CARD_BORDER }}>
-              <button onClick={() => setAttendanceView('main')} className="flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: '#EEF1F8', border: 'none', cursor: 'pointer' }}>
+              <button onClick={goMain} className="flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: '#EEF1F8', border: 'none', cursor: 'pointer' }}>
                 <ChevronLeft size={18} style={{ color: '#0F1623' }} />
               </button>
               <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>加班申請</h2>
@@ -1147,7 +1118,7 @@ export function EmployedWorkPage() {
                     <p style={{ fontSize: '1rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>加班申請已提交</p>
                     <p style={{ fontSize: '0.82rem', color: '#6B7A99', margin: '6px 0 0 0' }}>請等待商戶審核，結果將透過通知告知</p>
                   </div>
-                  <button onClick={() => setAttendanceView('main')} className="rounded-xl px-6 py-2.5" style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#6B7A99' }}>返回</button>
+                  <button onClick={goMain} className="rounded-xl px-6 py-2.5" style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#6B7A99' }}>返回</button>
                 </div>
               ) : (
                 <div className="rounded-2xl p-4 flex flex-col gap-4" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
@@ -1209,6 +1180,164 @@ export function EmployedWorkPage() {
                   );
                 })}
               </div>
+              <div style={{ height: 16 }} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Supplement select day ── */}
+      <AnimatePresence>
+        {attendanceView === 'supplement-select' && (
+          <motion.div
+            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0 z-30 flex flex-col" style={{ background: '#F7F8FC' }}
+          >
+            <div className="shrink-0 flex items-center gap-3 px-4 py-3" style={{ background: '#FFFFFF', borderBottom: CARD_BORDER }}>
+              <button onClick={goMain} className="flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: '#EEF1F8', border: 'none', cursor: 'pointer' }}>
+                <ChevronLeft size={18} style={{ color: '#0F1623' }} />
+              </button>
+              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>補打卡申請</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" style={{ scrollbarWidth: 'none' }}>
+              <p style={{ fontSize: '0.82rem', color: '#6B7A99', margin: 0 }}>請選擇需要補打卡的日期：</p>
+              {abnormals.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <CheckCircle2 size={36} style={{ color: '#15803D' }} />
+                  <p style={{ fontSize: '0.9rem', color: '#15803D', fontWeight: 600, margin: 0 }}>本週考勤均正常，無需補打卡</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {abnormals.map((d) => {
+                    const cfg = DAY_STATUS_CONFIG[d.status];
+                    return (
+                      <button key={d.dateNum}
+                        onClick={() => { setSelectedAbnormalDay(d); setSuppPageReason(''); setSuppPagePhoto(null); setSuppPageSubmitted(false); setAttendanceView('supplement-detail'); }}
+                        className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all active:scale-[0.98]"
+                        style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER, cursor: 'pointer' }}>
+                        <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 36, height: 36, background: cfg.bg }}>
+                          {d.status === 'late'   && <Clock  size={15} style={{ color: cfg.color }} />}
+                          {d.status === 'absent' && <XIcon  size={14} style={{ color: cfg.color }} />}
+                        </div>
+                        <div className="flex-1">
+                          <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>6月{d.dateNum}日（週{d.dayLabel}）</p>
+                          <p style={{ fontSize: '0.73rem', color: cfg.color, fontWeight: 600, margin: '3px 0 0 0' }}>
+                            {d.status === 'late' ? `遲到/早退 — 打卡時間 ${d.clockIn}` : '缺勤 — 未有打卡記錄'}
+                          </p>
+                        </div>
+                        <ChevronRight size={14} style={{ color: '#CBD1E1' }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Past supplement records */}
+              <div className="flex flex-col gap-3 pt-2">
+                <h3 style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>過往補打卡記錄</h3>
+                {SUPPLEMENT_RECORDS.map((r) => {
+                  const s = RECORD_STATUS[r.status];
+                  return (
+                    <div key={r.id} className="rounded-2xl px-4 py-3 flex flex-col gap-1.5" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: r.status === 'rejected' ? '1px solid rgba(217,48,37,0.2)' : CARD_BORDER }}>
+                      <div className="flex items-center justify-between">
+                        <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>{r.date}</p>
+                        <span className="rounded-full px-2.5 py-0.5" style={{ background: s.bg, color: s.color, fontSize: '0.7rem', fontWeight: 700 }}>{s.label}</span>
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: '#9CA3AF', margin: 0 }}>{r.reason}</p>
+                      {r.status === 'rejected' && r.rejectReason && (
+                        <div className="flex items-start gap-1.5 rounded-lg px-3 py-2" style={{ background: '#FEE2E2', marginTop: 2 }}>
+                          <AlertCircle size={12} style={{ color: '#D93025', flexShrink: 0, marginTop: 1 }} />
+                          <p style={{ fontSize: '0.73rem', color: '#991B1B', margin: 0, lineHeight: 1.5 }}><span style={{ fontWeight: 700 }}>拒絕原因：</span>{r.rejectReason}</p>
+                        </div>
+                      )}
+                      <p style={{ fontSize: '0.68rem', color: '#CBD1E1', margin: 0 }}>申請於 {r.at}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ height: 16 }} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Supplement detail / form ── */}
+      <AnimatePresence>
+        {attendanceView === 'supplement-detail' && selectedAbnormalDay && (
+          <motion.div
+            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0 z-30 flex flex-col" style={{ background: '#F7F8FC' }}
+          >
+            <div className="shrink-0 flex items-center gap-3 px-4 py-3" style={{ background: '#FFFFFF', borderBottom: CARD_BORDER }}>
+              <button onClick={() => setAttendanceView('supplement-select')} className="flex items-center justify-center rounded-xl" style={{ width: 36, height: 36, background: '#EEF1F8', border: 'none', cursor: 'pointer' }}>
+                <ChevronLeft size={18} style={{ color: '#0F1623' }} />
+              </button>
+              <div className="flex-1">
+                <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>填寫補打卡申請</h2>
+                <p style={{ fontSize: '0.72rem', color: '#9CA3AF', margin: '2px 0 0 0' }}>6月{selectedAbnormalDay.dateNum}日（週{selectedAbnormalDay.dayLabel}）</p>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" style={{ scrollbarWidth: 'none' }}>
+              {suppPageSubmitted ? (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, background: '#FEF3DC' }}>
+                    <CheckCircle2 size={28} style={{ color: '#F5A623' }} />
+                  </div>
+                  <div className="text-center">
+                    <p style={{ fontSize: '1rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>補打卡申請已提交</p>
+                    <p style={{ fontSize: '0.82rem', color: '#6B7A99', margin: '6px 0 0 0' }}>商戶審核中，結果將透過通知告知</p>
+                  </div>
+                  <button onClick={goMain} className="rounded-xl px-6 py-2.5" style={{ background: '#EEF1F8', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#6B7A99' }}>返回</button>
+                </div>
+              ) : (
+                <>
+                  {/* Date & status info */}
+                  <div className="rounded-2xl px-4 py-3 flex flex-col gap-2" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
+                    {[
+                      { label: '日期', value: `6月${selectedAbnormalDay.dateNum}日（週${selectedAbnormalDay.dayLabel}）` },
+                      { label: '原定班次', value: `${selectedAbnormalDay.scheduledStart} – ${selectedAbnormalDay.scheduledEnd}` },
+                      { label: '考勤狀態', value: selectedAbnormalDay.status === 'late' ? `遲到/早退（打卡 ${selectedAbnormalDay.clockIn}）` : '缺勤 — 未有打卡記錄' },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(15,22,35,0.05)' }}>
+                        <span style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>{label}</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0F1623' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Form */}
+                  <div className="rounded-2xl p-4 flex flex-col gap-4" style={{ background: '#FFFFFF', boxShadow: CARD_SHADOW, border: CARD_BORDER }}>
+                    <div className="flex flex-col gap-1.5">
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99' }}>補打卡原因 <span style={{ color: '#D93025' }}>*</span></span>
+                      <textarea value={suppPageReason} onChange={(e) => setSuppPageReason(e.target.value)}
+                        placeholder="請說明當時情況，例如：手機沒電、設備故障、忘記打卡等…" rows={4}
+                        style={{ padding: '12px 14px', borderRadius: '0.75rem', border: '1.5px solid rgba(15,22,35,0.1)', fontSize: '0.9rem', color: '#0F1623', background: '#F7F8FC', outline: 'none', fontFamily: 'inherit', resize: 'none', width: '100%', boxSizing: 'border-box', lineHeight: 1.6 }} />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7A99' }}>附加圖片（選填）</span>
+                      {suppPagePhoto ? (
+                        <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: '#DCFCE7', border: '1px solid rgba(21,128,61,0.2)' }}>
+                          <Check size={13} style={{ color: '#15803D' }} />
+                          <span style={{ fontSize: '0.8rem', color: '#15803D', flex: 1 }}>{suppPagePhoto}</span>
+                          <button onClick={() => setSuppPagePhoto(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}><XIcon size={14} style={{ color: '#9CA3AF' }} /></button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center justify-center gap-2 rounded-xl py-2.5 cursor-pointer" style={{ background: '#F7F8FC', border: '1.5px dashed rgba(15,22,35,0.15)' }}>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setSuppPagePhoto(f.name); }} />
+                          <Camera size={14} style={{ color: '#9CA3AF' }} />
+                          <span style={{ fontSize: '0.82rem', color: '#9CA3AF', fontWeight: 600 }}>從相冊選擇圖片</span>
+                        </label>
+                      )}
+                    </div>
+                    <button onClick={() => { if (suppPageReason.trim()) setSuppPageSubmitted(true); }}
+                      disabled={!suppPageReason.trim()}
+                      className="w-full rounded-xl py-3 transition-all active:scale-[0.98]"
+                      style={{ background: suppPageReason.trim() ? '#F5A623' : '#EEF1F8', color: suppPageReason.trim() ? '#0F1623' : '#9CA3AF', border: 'none', cursor: suppPageReason.trim() ? 'pointer' : 'not-allowed', fontSize: '0.95rem', fontWeight: 700 }}>
+                      提交補打卡申請
+                    </button>
+                  </div>
+                </>
+              )}
               <div style={{ height: 16 }} />
             </div>
           </motion.div>

@@ -147,10 +147,7 @@ function ShiftDetailPage({ shift, onBack }: { shift: Shift; onBack: () => void }
   }
   function SectionLabel({ title, right }: { title: string; right?: React.ReactNode }) {
     return (
-      <div className="flex items-center justify-between pt-4 pb-1">
-        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{title}</span>
-        {right}
-      </div>
+      null
     );
   }
 
@@ -241,40 +238,7 @@ function ShiftDetailPage({ shift, onBack }: { shift: Shift; onBack: () => void }
         {/* Location guide — at bottom */}
         {shift.address && <>
           <SectionLabel title="前往地點指引" />
-          <div className="flex flex-col gap-3 pt-1">
-            {/* Address */}
-            <div className="flex items-start gap-2 py-2" style={{ borderBottom: '1px solid rgba(15,22,35,0.05)' }}>
-              <MapPin size={13} style={{ color: '#9CA3AF', flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0F1623', margin: 0 }}>{shift.store}</p>
-                
-              </div>
-            </div>
-            {/* Step-by-step visual guide */}
-            <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6B7A99', margin: '4px 0 0' }}>路線指引</p>
-            {[
-              { step: '1', icon: '🚇', title: '乘坐港鐵', desc: '前往銅鑼灣站（荃灣線 / 港島線）' },
-              { step: '2', icon: '🚪', title: '由 E 出口離開', desc: '跟隨時代廣場指示牌，步行約 3 分鐘' },
-              { step: '3', icon: '🏢', title: '抵達時代廣場', desc: '進入正門，乘搭電梯至 3 樓目標崗位' },
-            ].map(({ step, icon, title, desc }) => (
-              <div key={step} className="flex items-start gap-3">
-                <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 28, height: 28, background: '#EEF1F8', border: CARD_BORDER }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#6B7A99' }}>{step}</span>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span style={{ fontSize: '1rem' }}>{icon}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F1623' }}>{title}</span>
-                  </div>
-                  <div className="flex items-center justify-center rounded-xl mb-1.5" style={{ height: 56, background: '#F7F8FC', border: '1.5px dashed rgba(15,22,35,0.1)' }}>
-                    <span style={{ fontSize: '0.68rem', color: '#CBD1E1' }}>實景圖片</span>
-                  </div>
-                  
-                </div>
-              </div>
-            ))}
-            
-          </div>
+          
         </>}
 
       </div>
@@ -366,7 +330,7 @@ function RequestSheet({ title, children, onClose }: { title: string; children: R
 }
 
 // ── Main component ────────────────────────────────────────
-export function ShiftPage() {
+export function ShiftPage({ onSubPageChange }: { onSubPageChange?: (active: boolean) => void }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<{ day: number; dayLabel: string } | null>(null);
   const [detailShift, setDetailShift] = useState<Shift | null>(null);
@@ -501,7 +465,7 @@ export function ShiftPage() {
               <p style={{ fontSize: '0.86rem', color: '#9CA3AF', fontWeight: 600, margin: 0 }}>{selectedDay ? '此日無排班' : '本月暫無排班'}</p>
             </div>
           ) : (
-            displayList.map((s) => <ShiftListCard key={s.id} shift={s} seqInDay={s.seqInDay} onDetail={setDetailShift} />)
+            displayList.map((s) => <ShiftListCard key={s.id} shift={s} seqInDay={s.seqInDay} onDetail={(sh) => { setDetailShift(sh); onSubPageChange?.(true); }} />)
           )}
         </div>
 
@@ -509,7 +473,7 @@ export function ShiftPage() {
       </div>
 
       {/* Shift detail overlay */}
-      {detailShift && <ShiftDetailPage shift={detailShift} onBack={() => setDetailShift(null)} />}
+      {detailShift && <ShiftDetailPage shift={detailShift} onBack={() => { setDetailShift(null); onSubPageChange?.(false); }} />}
 
       {/* Leave sheet */}
       {showLeaveSheet && (

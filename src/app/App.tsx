@@ -200,6 +200,7 @@ export default function App() {
   const [forceEditProfile, setForceEditProfile] = useState(false);
   const [pendingJobAfterEdit, setPendingJobAfterEdit] = useState<number | null>(null);
   const [forceWalletTxId, setForceWalletTxId] = useState<number | null>(null);
+  const [subPageActive, setSubPageActive] = useState(false);
 
   const t = translations[lang];
 
@@ -415,6 +416,7 @@ export default function App() {
                         onForceConsumed={() => setForceEditProfile(false)}
                         forceWalletTxId={forceWalletTxId}
                         onForceWalletConsumed={() => setForceWalletTxId(null)}
+                        onSubPageChange={setSubPageActive}
                         onEditSaved={handleEditSaved}
                       />
                     </motion.div>
@@ -422,13 +424,13 @@ export default function App() {
                   {appMode === 'employed' && activeNav === 0 && (
                     <motion.div key="employed-work" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <EmployedWorkPage />
+                      <EmployedWorkPage onSubPageChange={setSubPageActive} />
                     </motion.div>
                   )}
                   {appMode === 'employed' && activeNav === 1 && (
                     <motion.div key="employed-shift" className="absolute inset-0"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                      <ShiftPage />
+                      <ShiftPage onSubPageChange={setSubPageActive} />
                     </motion.div>
                   )}
                   {appMode === 'employed' && activeNav === 2 && (
@@ -454,6 +456,7 @@ export default function App() {
                         onForceConsumed={() => setForceEditProfile(false)}
                         forceWalletTxId={forceWalletTxId}
                         onForceWalletConsumed={() => setForceWalletTxId(null)}
+                        onSubPageChange={setSubPageActive}
                         onEditSaved={handleEditSaved}
                       />
                     </motion.div>
@@ -513,7 +516,7 @@ export default function App() {
               <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 120, pointerEvents: 'auto' }}>
                 <div
                   className="flex rounded-full p-0.5"
-                  style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', boxShadow: '0 2px 12px rgba(15,22,35,0.14)', border: '1px solid rgba(15,22,35,0.08)' }}
+                  style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', boxShadow: '0 2px 12px rgba(15,22,35,0.14)', border: '1px solid rgba(15,22,35,0.08)', display: (subPageActive || selectedJobId !== null) ? 'none' : 'flex' }}
                 >
                   <button
                     onClick={handleSwitchToEmployed}
@@ -553,7 +556,7 @@ export default function App() {
                   return (
                     <button
                       key={i}
-                      onClick={() => setActiveNav(i)}
+                      onClick={() => { setActiveNav(i); setSubPageActive(false); }}
                       className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all"
                       style={{ border: 'none', background: 'transparent', cursor: 'pointer', minWidth: 56 }}
                     >

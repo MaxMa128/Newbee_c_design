@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Share2, MapPin, FileText, Award, Building2, CheckCircle2, Clock, Check, Shield, AlertCircle, GraduationCap, Briefcase, X as XIcon, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Share2, MapPin, FileText, Award, Building2, CheckCircle2, Clock, Check, Shield, AlertCircle, GraduationCap, Briefcase, X as XIcon, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Language, translations } from './i18n';
 import { Job, formatTime } from './jobData';
@@ -65,11 +65,22 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
   const [showResumePreview, setShowResumePreview] = useState(false);
   const [showStandbyRules, setShowStandbyRules] = useState(false);
 
-  const salaryStr = job.salaryMax
-    ? `HK$${job.salary}–${job.salaryMax}${t[job.salaryPeriod === 'hourly' ? 'hourlyUnit' : 'monthlyUnit']}`
+  const [selectedSiteId, setSelectedSiteId] = useState<number | null>(
+    job.workSites.length === 1 ? job.workSites[0].id : null
+  );
+  const [showSitePicker, setShowSitePicker] = useState(false);
+
+  const salaryStr = job.salaryMax && job.salaryMax !== job.salary
+    ? `HK$${job.salary.toLocaleString()}–${job.salaryMax.toLocaleString()}${t[job.salaryPeriod === 'hourly' ? 'hourlyUnit' : 'monthlyUnit']}`
     : `HK$${job.salary.toLocaleString()}${t[job.salaryPeriod === 'hourly' ? 'hourlyUnit' : 'monthlyUnit']}`;
 
   const jobTypeLabel = job.jobType === 'full-time' ? t.fullTimeTag : job.jobType === 'part-time' ? t.partTimeTag : t.casualTag;
+
+  const totalHeadcount = job.workSites.reduce((s, ws) => s + ws.headcountRegular + ws.headcountStandby, 0);
+  const totalRemaining = job.workSites.reduce((s, ws) => s + ws.remainingRegular + ws.remainingStandby, 0);
+  const selectedSite = selectedSiteId ? job.workSites.find((s) => s.id === selectedSiteId) ?? null : null;
+
+  const SETTLEMENT_LABEL: Record<string, string> = { daily: '日結', weekly: '週結', monthly: '月結' };
 
   function handleShare() {
     const url = `https://newbee.hk/jobs/${job.id}`;
@@ -85,14 +96,9 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
 
   function handleApply() {
     if (applyStatus !== 'idle') return;
-    if (!isVerified) {
-      setShowVerifyPrompt(true);
-      return;
-    }
-    if (job.remainingSpots === 0) {
-      setShowStandbyRules(true);
-      return;
-    }
+    if (!isVerified) { setShowVerifyPrompt(true); return; }
+    if (job.workSites.length > 1 && !selectedSiteId) { setShowSitePicker(true); return; }
+    if (totalRemaining === 0) { setShowStandbyRules(true); return; }
     setShowResumePreview(true);
   }
 
@@ -108,7 +114,7 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
 
   function confirmApply() {
     setShowApplyConfirm(false);
-    if (job.remainingSpots === 0) {
+    if (totalRemaining === 0) {
       setApplyStatus('standby');
     } else {
       setApplyStatus('applied');
@@ -196,17 +202,32 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
             </div>
           </div>
 
-          {/* Salary + meta strip */}
-          <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(15,22,35,0.05)' }}>
-            <div>
-              <p style={{ fontSize: '0.68rem', fontWeight: 600, color: '#9CA3AF', margin: '0 0 2px 0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>薪酬</p>
-              <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F1623', letterSpacing: '-0.02em' }}>{salaryStr}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p style={{ fontSize: '0.68rem', fontWeight: 600, color: '#9CA3AF', margin: '0 0 2px 0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>招募</p>
-                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623' }}>{job.headcount}人</span>
+          {/* Salary + settlement + headcount strip */}
+          <div className="flex flex-col gap-3 pt-3" style={{ borderTop: '1px solid rgba(15,22,35,0.05)' }}>
+            {/* Salary row */}
+            <div className="flex items-end justify-between">
+              <div>
+                <p style={{ fontSize: '0.68rem', fontWeight: 600, color: '#9CA3AF', margin: '0 0 2px 0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>薪酬</p>
+                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F1623', letterSpacing: '-0.02em' }}>{salaryStr}</span>
               </div>
+              <span className="rounded-md px-2 py-0.5 mb-1" style={{ fontSize: '0.7rem', fontWeight: 700, background: '#EEF1F8', color: '#6B7A99', border: '1px solid rgba(15,22,35,0.08)' }}>
+                {SETTLEMENT_LABEL[job.salarySettlement]}
+              </span>
+            </div>
+            {/* Headcount detail row */}
+            <div className="rounded-xl px-3 py-2.5 flex gap-0" style={{ background: '#F7F8FC', border: '1px solid rgba(15,22,35,0.06)' }}>
+              {[
+                { label: '總招募', value: `${totalHeadcount}人`, valueColor: '#0F1623' },
+                { label: '正式招募', value: `${job.workSites.reduce((s, ws) => s + ws.headcountRegular, 0)}人`, valueColor: '#0F1623' },
+                { label: '正式剩餘', value: `${job.workSites.reduce((s, ws) => s + ws.remainingRegular, 0)}人`, valueColor: job.workSites.reduce((s, ws) => s + ws.remainingRegular, 0) === 0 ? '#D93025' : '#15803D' },
+                { label: '候補招募', value: `${job.workSites.reduce((s, ws) => s + ws.headcountStandby, 0)}人`, valueColor: '#0F1623' },
+                { label: '候補剩餘', value: `${job.workSites.reduce((s, ws) => s + ws.remainingStandby, 0)}人`, valueColor: '#D4891A' },
+              ].map(({ label, value, valueColor }, i, arr) => (
+                <div key={label} className="flex-1 flex flex-col items-center" style={{ borderRight: i < arr.length - 1 ? '1px solid rgba(15,22,35,0.07)' : 'none' }}>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 800, color: valueColor }}>{value}</span>
+                  <span style={{ fontSize: '0.58rem', color: '#9CA3AF', marginTop: 1 }}>{label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -233,14 +254,6 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
 
         {/* Job info */}
         <SectionCard title="崗位資訊">
-          <InfoRow
-            icon={<FileText size={14} style={{ color: '#6B7A99' }} />}
-            label="工作日期"
-            value={job.date[lang]}
-            sub={formatTime(job.postedMinutes, lang) + '發布'}
-          />
-          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
-
           {/* Requirements */}
           <div>
             <div className="flex items-center gap-2 mb-2.5">
@@ -284,83 +297,104 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
           </div>
         </SectionCard>
 
-        {/* Store info */}
-        <SectionCard title="門店資訊">
-          <InfoRow
-            icon={<Building2 size={14} style={{ color: '#6B7A99' }} />}
-            label="門店名稱"
-            value={job.store[lang]}
-          />
-          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
-          <InfoRow
-            icon={<MapPin size={14} style={{ color: '#6B7A99' }} />}
-            label="工作地區"
-            value={job.region[lang]}
-          />
-          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
-          <InfoRow
-            icon={<MapPin size={14} style={{ color: '#6B7A99' }} />}
-            label="詳細地址"
-            value={job.address[lang]}
-            sub={`${job.district[lang]} · ${job.mtr[lang]}`}
-          />
-          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
-          {/* Store photos */}
-          <div>
-            <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9CA3AF', margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>門店照片</p>
-            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-              {[
-                { bg: 'linear-gradient(135deg, #E8F4FD 0%, #C9E8F8 100%)', label: '門口' },
-                { bg: 'linear-gradient(135deg, #F0F4FF 0%, #D8E3FF 100%)', label: '內部' },
-                { bg: 'linear-gradient(135deg, #FEF9EC 0%, #FDE9B4 100%)', label: '環境' },
-              ].map(({ bg, label }) => (
-                <div
-                  key={label}
-                  className="shrink-0 flex flex-col items-center justify-center rounded-xl gap-1"
-                  style={{ width: 96, height: 72, background: bg, border: '1px solid rgba(15,22,35,0.07)' }}
-                >
-                  <span style={{ fontSize: '1.2rem' }}>🏪</span>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#9CA3AF' }}>{label}</span>
+        {/* Work sites */}
+        <div className="flex flex-col gap-3">
+          <h3 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>工作網點</h3>
+          {job.workSites.map((site) => {
+            const isSelected = selectedSiteId === site.id;
+            const isFull = site.remainingRegular === 0;
+            const siteShift = site.shifts[0];
+            return (
+              <button
+                key={site.id}
+                onClick={() => setSelectedSiteId(isSelected ? null : site.id)}
+                className="w-full text-left rounded-2xl overflow-hidden transition-all active:scale-[0.98]"
+                style={{
+                  background: '#FFFFFF',
+                  boxShadow: isSelected ? '0 2px 12px rgba(59,91,219,0.15)' : '0 1px 3px rgba(15,22,35,0.06), 0 4px 16px rgba(15,22,35,0.04)',
+                  border: isSelected ? '1.5px solid rgba(59,91,219,0.4)' : '1px solid rgba(15,22,35,0.06)',
+                  cursor: 'pointer',
+                }}
+              >
+                {/* Site header */}
+                <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(15,22,35,0.05)' }}>
+                  <div className="flex items-center gap-2">
+                    <Building2 size={14} style={{ color: isSelected ? '#3B5BDB' : '#9CA3AF' }} />
+                    <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F1623' }}>{site.name[lang]}</span>
+                    {job.workSites.length > 1 && isSelected && (
+                      <span className="rounded-full px-2 py-0.5" style={{ background: '#EEF8FF', color: '#3B5BDB', fontSize: '0.62rem', fontWeight: 700 }}>已選</span>
+                    )}
+                  </div>
+                  {isFull
+                    ? <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#D93025' }}>已滿</span>
+                    : <span style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>{isSelected ? '▲' : '▼'}</span>}
                 </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ height: 1, background: 'rgba(15,22,35,0.05)' }} />
-          {/* Map module */}
-          <button
-            onClick={handleMapPress}
-            className="w-full rounded-xl overflow-hidden transition-all active:scale-[0.98]"
-            style={{ border: 'none', padding: 0, cursor: 'pointer', position: 'relative' }}
-          >
-            {/* Static map placeholder */}
-            <div
-              className="w-full flex flex-col items-center justify-center gap-2"
-              style={{
-                height: 120,
-                background: 'linear-gradient(135deg, #E8EEFF 0%, #DDE7F8 100%)',
-                borderRadius: '0.75rem',
-                border: '1.5px solid rgba(59,91,219,0.15)',
-              }}
-            >
-              {/* Simple map grid lines */}
-              <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, opacity: 0.3 }} viewBox="0 0 320 120" preserveAspectRatio="none">
-                <line x1="0" y1="40" x2="320" y2="40" stroke="#3B5BDB" strokeWidth="0.8" />
-                <line x1="0" y1="80" x2="320" y2="80" stroke="#3B5BDB" strokeWidth="0.8" />
-                <line x1="80" y1="0" x2="80" y2="120" stroke="#3B5BDB" strokeWidth="0.8" />
-                <line x1="160" y1="0" x2="160" y2="120" stroke="#3B5BDB" strokeWidth="0.8" />
-                <line x1="240" y1="0" x2="240" y2="120" stroke="#3B5BDB" strokeWidth="0.8" />
-              </svg>
-              <div className="relative flex flex-col items-center gap-1.5">
-                <div className="flex items-center justify-center rounded-full" style={{ width: 36, height: 36, background: '#FFFFFF', boxShadow: '0 2px 8px rgba(59,91,219,0.25)' }}>
-                  <MapPin size={18} style={{ color: '#D93025' }} />
+
+                {/* Site detail grid */}
+                <div className="px-4 py-3 grid gap-y-2.5" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                  {/* Address */}
+                  <div className="col-span-2 flex items-start gap-1.5">
+                    <MapPin size={12} style={{ color: '#9CA3AF', flexShrink: 0, marginTop: 2 }} />
+                    <span style={{ fontSize: '0.75rem', color: '#6B7A99', lineHeight: 1.4 }}>{site.address[lang]}　{site.mtr[lang]}</span>
+                  </div>
+                  {/* Shift */}
+                  {siteShift && (
+                    <div className="col-span-2 flex items-center gap-1.5">
+                      <Clock size={12} style={{ color: '#9CA3AF', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151' }}>{siteShift.label[lang]}</span>
+                    </div>
+                  )}
+                  {/* Salary */}
+                  <div className="flex flex-col gap-0.5">
+                    <span style={{ fontSize: '0.65rem', color: '#9CA3AF' }}>薪資</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F1623' }}>
+                      HK${site.salary}{job.salaryPeriod === 'hourly' ? '/時' : '/月'}
+                    </span>
+                  </div>
+                  {/* OT salary */}
+                  {site.salaryOT ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span style={{ fontSize: '0.65rem', color: '#9CA3AF' }}>加班薪資</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#374151' }}>HK${site.salaryOT}/時</span>
+                    </div>
+                  ) : <div />}
+                  {/* Meal + shuttle — badge style, no emoji */}
+                  <div className="flex items-center gap-2 col-span-2">
+                    {[
+                      { label: '有飯鐘', has: site.hasMeal },
+                      { label: '有直達班車', has: site.hasShuttle },
+                    ].filter(({ has }) => has).map(({ label }) => (
+                      <div key={label} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1"
+                        style={{ background: '#DCFCE7', border: '1px solid rgba(21,128,61,0.2)' }}>
+                        <div className="rounded-full shrink-0" style={{ width: 6, height: 6, background: '#15803D' }} />
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#15803D' }}>
+                          {label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Headcount — color-coded remaining vs total */}
+                  <div className="col-span-2 rounded-xl px-3 py-2 flex gap-4" style={{ background: '#F7F8FC', border: '1px solid rgba(15,22,35,0.06)' }}>
+                    {[
+                      { label: '正式招募', count: site.headcountRegular, remaining: site.remainingRegular, remainColor: site.remainingRegular === 0 ? '#D93025' : '#15803D' },
+                      { label: '候補招募', count: site.headcountStandby, remaining: site.remainingStandby, remainColor: '#D4891A' },
+                    ].map(({ label, count, remaining, remainColor }) => (
+                      <div key={label} className="flex-1">
+                        <p style={{ fontSize: '0.62rem', color: '#9CA3AF', margin: '0 0 3px' }}>{label}</p>
+                        <div className="flex items-baseline gap-1">
+                          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: remainColor }}>剩{remaining}</span>
+                          <span style={{ fontSize: '0.72rem', color: '#CBD1E1' }}>/</span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#9CA3AF' }}>共{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-full px-3 py-1" style={{ background: '#FFFFFF', boxShadow: '0 2px 8px rgba(15,22,35,0.1)' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F1623' }}>點擊查看地圖</span>
-                </div>
-              </div>
-            </div>
-          </button>
-        </SectionCard>
+              </button>
+            );
+          })}
+        </div>
+
 
         {/* Company info */}
         <SectionCard title="公司資訊">
@@ -406,7 +440,7 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
           </div>
         )}
         {!readOnly && (() => {
-          const isFull = job.remainingSpots === 0;
+          const isFull = totalRemaining === 0;
 
           if (applyStatus === 'idle' && isFull) {
             return (
@@ -422,20 +456,21 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
                   className="flex-1 rounded-xl py-3.5 flex items-center justify-center"
                   style={{ background: '#EEF1F8', border: 'none', cursor: 'not-allowed' }}
                 >
-                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#9CA3AF' }}>崗位已滿</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#9CA3AF' }}>正式岗已滿</span>
                 </div>
               </>
             );
           }
 
           if (applyStatus === 'idle') {
+            const needSite = job.workSites.length > 1 && !selectedSiteId;
             return (
               <button
                 onClick={handleApply}
                 className="flex-1 rounded-xl py-3.5 transition-all active:scale-[0.98]"
-                style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 700, color: '#0F1623' }}
+                style={{ background: '#F5A623', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: '#0F1623' }}
               >
-                立即申請
+                {needSite ? '選擇網點並申請' : '立即申請'}
               </button>
             );
           }
@@ -620,6 +655,56 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
         })()}
       </AnimatePresence>
 
+      {/* Site picker sheet — when multiple sites and none selected */}
+      <AnimatePresence>
+        {showSitePicker && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-40" style={{ background: 'rgba(15,22,35,0.45)', backdropFilter: 'blur(2px)' }}
+              onClick={() => setShowSitePicker(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute left-0 right-0 bottom-0 z-50 rounded-t-2xl px-5 py-6 flex flex-col gap-4"
+              style={{ background: '#FFFFFF', boxShadow: '0 -8px 40px rgba(15,22,35,0.15)' }}
+            >
+              <div className="flex items-center justify-between">
+                <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>選擇工作網點</p>
+                <button onClick={() => setShowSitePicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                  <XIcon size={18} style={{ color: '#9CA3AF' }} />
+                </button>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {job.workSites.map((site) => {
+                  const isFull = site.remainingRegular === 0;
+                  return (
+                    <button key={site.id} onClick={() => { setSelectedSiteId(site.id); setShowSitePicker(false); setTimeout(() => setShowResumePreview(true), 100); }}
+                      className="flex items-center gap-3 rounded-2xl p-4 text-left transition-all active:scale-[0.98]"
+                      style={{ background: isFull ? '#F7F8FC' : '#FFFFFF', border: `1.5px solid ${isFull ? 'rgba(15,22,35,0.07)' : 'rgba(15,22,35,0.1)'}`, cursor: isFull ? 'not-allowed' : 'pointer' }}
+                      disabled={isFull}
+                    >
+                      <div className="flex-1">
+                        <p style={{ fontSize: '0.9rem', fontWeight: 700, color: isFull ? '#9CA3AF' : '#0F1623', margin: 0 }}>{site.name[lang]}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#9CA3AF', margin: '3px 0 0' }}>{site.shifts[0]?.label[lang]}</p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: site.remainingRegular === 0 ? '#D93025' : '#15803D' }}>
+                            正式 剩{site.remainingRegular}/{site.headcountRegular}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>候補 剩{site.remainingStandby}/{site.headcountStandby}</span>
+                        </div>
+                      </div>
+                      {isFull
+                        ? <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#D93025' }}>已滿</span>
+                        : <ChevronRight size={16} style={{ color: '#CBD1E1' }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Standby rules sheet — shown before confirming waitlist when job is full */}
       <AnimatePresence>
         {showStandbyRules && (
@@ -787,7 +872,7 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
                 </div>
                 <div>
                   <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F1623', margin: 0 }}>
-                    {job.remainingSpots === 0 ? '確認申請候補？' : '確認申請此職位？'}
+                    {totalRemaining === 0 ? '確認申請候補？' : '確認申請此職位？'}
                   </p>
                   <p style={{ fontSize: '0.78rem', color: '#6B7A99', margin: '3px 0 0 0' }}>{job.title[lang]} · {job.company}</p>
                 </div>
@@ -799,7 +884,9 @@ export function JobDetailPage({ job, lang, isVerified, onBack, onStartVerify, re
                 </div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>地點</span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0F1623' }}>{job.district[lang]} · {job.store[lang]}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0F1623' }}>
+                    {selectedSite ? selectedSite.name[lang] : job.district[lang]}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>日期</span>

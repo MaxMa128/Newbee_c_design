@@ -31,6 +31,7 @@ interface ProfilePageProps {
   onEditSaved?: () => void;
   forceWalletTxId?: number | null;
   onForceWalletConsumed?: () => void;
+  onSubPageChange?: (active: boolean) => void;
 }
 
 export interface EducationEntry {
@@ -2106,6 +2107,7 @@ export function ProfilePage({
   editData, onEditDataChange,
   forceEditProfile, onForceConsumed, onEditSaved,
   forceWalletTxId, onForceWalletConsumed,
+  onSubPageChange,
   onViewJob,
 }: ProfilePageProps & { onViewJob?: (jobId: number) => void }) {
   const t = translations[lang];
@@ -2113,12 +2115,18 @@ export function ProfilePage({
   const [deepLinkTxId, setDeepLinkTxId] = useState<number | null>(null);
 
   const current = stack[stack.length - 1];
-  const push = (v: ProfileView) => setStack((s) => [...s, v]);
-  const pop = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
+  const push = (v: ProfileView) => { setStack((s) => [...s, v]); onSubPageChange?.(true); };
+  const pop  = () => {
+    setStack((s) => {
+      const next = s.length > 1 ? s.slice(0, -1) : s;
+      if (next.length === 1) onSubPageChange?.(false);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (forceEditProfile) {
-      setStack(['main', 'edit-profile']);
+      setStack(['main', 'edit-profile']); onSubPageChange?.(true);
       onForceConsumed?.();
     }
   }, [forceEditProfile]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2126,7 +2134,7 @@ export function ProfilePage({
   useEffect(() => {
     if (forceWalletTxId != null) {
       setDeepLinkTxId(forceWalletTxId);
-      setStack(['main', 'wallet']);
+      setStack(['main', 'wallet']); onSubPageChange?.(true);
       onForceWalletConsumed?.();
     }
   }, [forceWalletTxId]); // eslint-disable-line react-hooks/exhaustive-deps
